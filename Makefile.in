@@ -1,0 +1,62 @@
+OCFLAGS=-pp camlp4o
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+
+CC=@CC@
+# -pedantic returns a lot of warnings related to the macros
+CFLAGS=@CPPFLAGS@ @CFLAGS@ -fPIC -Wall -Werror -Wno-long-long
+LIBS=@LIBS@
+LDFLAGS=@LDFLAGS@
+
+# -linkall: all users of this library must load all our modules;
+MKLIBFLAGS=-linkall
+
+INSTALL=@INSTALL@
+
+all: bytecode opt docs
+
+docs:
+	if [ ! -d doc ]; then mkdir doc; fi
+	ocamldoc -html -d doc buddy.mli
+
+bytecode: buddy.cma
+
+opt: buddy.cmxa
+
+clean:
+	rm -f *.o *.cmo *.cmx *.cmi *.so *.cma *.cmxa *.a
+
+distclean: clean
+	rm -rf autom4te.* config.* META Makefile doc
+
+install: buddy.cma buddy.cmxa
+	[ -f *.so ] && SO_FILES=*.so; \
+	ocamlfind install buddy META buddy.cmi buddy.mli buddy.cma *.cmxa *.a *.cmx $$SO_FILES
+
+remove: uninstall
+uninstall:
+	ocamlfind remove buddy
+
+update: buddy.cma
+	ocamlfind remove buddy
+	make install
+
+buddy.cma: buddy.cmo buddy_stubs.o
+	ocamlmklib -o buddy -oc buddy_stubs buddy.cmo buddy_stubs.o -L. $(LDFLAGS) $(LIBS) $(MKLIBFLAGS)
+
+buddy.cmxa: buddy.cmx buddy.o buddy_stubs.o
+	ocamlmklib -o buddy -oc buddy_stubs buddy.cmx buddy_stubs.o -L. $(LDFLAGS) $(LIBS) $(MKLIBFLAGS)
+
+buddy.cmo: buddy.cmi buddy.ml
+
+.SUFFIXES: .ml .mli .cmo .cmi .cmx
+
+.mli.cmi:
+	ocamlc -w A -warn-error A -c $<
+.ml.cmo:
+	ocamlc -w A -warn-error A $(OCFLAGS) -c $<
+.ml.cmx:
+	ocamlc -w A -warn-error A $(OCFLAGS) -c $*.mli
+	ocamlopt -w A -warn-error A -inline 20 $(OCFLAGS) -c $<

@@ -1,0 +1,7 @@
+name="Buddy"
+version="@PACKAGE_VERSION@"
+description="Ocaml bindings to Buddy"
+requires=""
+archive(byte) = "buddy.cma"
+archive(native) = "buddy.cmxa"
+

@@ -1,0 +1,10 @@
+
+Ocaml bindings for the buddy BDD library 
+http://buddy.wiki.sourceforge.net/
+
+The original authors of these bindings are Akihiko Tozawa and Masami Hagiya
+
+The code was downloaded on 2008/11/16 from
+http://nicosia.is.s.u-tokyo.ac.jp/members/hagiya/xml/readme.htm#buddy
+
+additional work done by pietro abate <pietro.abate@pps.jussieu.fr>
