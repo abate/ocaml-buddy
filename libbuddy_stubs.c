@@ -60,11 +60,9 @@ void wrapper_deletebddpair(value v)
 
 /* wrappers */
 
-CAMLprim void wrapper_bdd_init(value v1, value v2)
-{
-  int nodesize = Int_val(v1);
-  int cachesize = Int_val(v2);
-  bdd_init(nodesize, cachesize);
+CAMLprim value wrapper_bdd_init(value nodesize, value cachesize) {
+  CAMLparam2 (nodesize, cachesize);
+  bdd_init(Int_val(nodesize), Int_val(cachesize));
 
   bddops.identifier = NULL;
   bddops.finalize = wrapper_deletebdd;
@@ -79,30 +77,30 @@ CAMLprim void wrapper_bdd_init(value v1, value v2)
   bddpairops.hash = NULL;
   bddpairops.serialize = NULL;
   bddpairops.deserialize = NULL;
+  CAMLreturn(Val_unit);
 }
 
-CAMLprim void wrapper_bdd_done() 
-{
+CAMLprim value wrapper_bdd_done() {
+  CAMLparam0();
   bdd_done();
+  CAMLreturn(Val_unit);
 }
 
-CAMLprim void wrapper_bdd_setvarnum(value v) 
-{
-  int num = Int_val(v);
-  bdd_setvarnum(num);
+CAMLprim value wrapper_bdd_setvarnum(value num) {
+  CAMLparam1(num);
+  bdd_setvarnum(Int_val(num));
+  CAMLreturn(Val_unit);
 }
 
-CAMLprim value wrapper_bdd_varnum() 
-{
-  int num = bdd_varnum();
-  return Val_int(num);
+CAMLprim value wrapper_bdd_varnum() {
+  CAMLparam0();
+  CAMLreturn(Val_int(bdd_varnum()));
 }
 
-CAMLprim value wrapper_bdd_newpair()
-{
-  bddPair* shifter;
+CAMLprim value wrapper_bdd_newpair() {
   CAMLparam0(); 
   CAMLlocal1(r);
+  bddPair* shifter;
   r = alloc_custom(&bddpairops, sizeof (bddPair*), 1, 1);
   shifter = bdd_newpair();
   *((bddPair**)Data_custom_val(r)) = shifter;
@@ -114,11 +112,11 @@ CAMLprim value wrapper_bdd_newpair()
  * (this is here to demonstrate callback)
  */
 
-CAMLprim value wrapper_bdd_createset(value q)
-{
+CAMLprim value wrapper_bdd_createset(value q) {
+  CAMLparam1(q); 
+  CAMLlocal1(r);
   int l,v;
   BDD d,e;
-  CAMLparam1(q); 
   d = bdd_true ();
   for (l = bdd_varnum() - 1; l >= 0; l--) 
     {
@@ -131,7 +129,6 @@ CAMLprim value wrapper_bdd_createset(value q)
           d = e;
         }
     }
-  CAMLlocal1(r);
   wrapper_makebdd(&r, d);
   CAMLreturn(r);
 }

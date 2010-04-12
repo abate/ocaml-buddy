@@ -30,7 +30,9 @@ let _BDD_REORDER_FIXED = 1
 
 external bdd_init : int -> int -> unit = "wrapper_bdd_init"
 external bdd_done : unit -> unit = "wrapper_bdd_done"
-external bdd_setvarnum : int -> unit = "wrapper_bdd_setvarnum"
+
+external setvarnum : int -> unit = "wrapper_bdd_setvarnum"
+
 external bdd_varnum : unit -> int = "wrapper_bdd_varnum"
 external bdd_ithvar : int -> bdd = "wrapper_bdd_ithvar"
 external bdd_nithvar : int -> bdd = "wrapper_bdd_nithvar"
@@ -75,11 +77,20 @@ external bdd_createset : (int -> bool) -> bdd = "wrapper_bdd_createset"
 
 (* utility functions *)
 
+let varcount = ref 0
+let new_var () = 
+  incr varcount;
+  if bdd_varnum() <= !varcount then (setvarnum (!varcount + 1); !varcount) else !varcount
+;;
+
+let init ?(nodenum=1000) ?(cachesize=100) () = bdd_init nodenum cachesize ;;
+let reset () = bdd_done () ;;
+
 let bdd_zero = bdd_false ()
 let bdd_one = bdd_true ()
 
-let bdd_pos x = bdd_ithvar (if bdd_varnum() <= x then (bdd_setvarnum (x + 1); x) else x)
-let bdd_neg x = bdd_nithvar (if bdd_varnum() <= x then (bdd_setvarnum (x + 1); x) else x)
+let bdd_pos x = bdd_ithvar (if bdd_varnum() <= x then (setvarnum (x + 1); x) else x)
+let bdd_neg x = bdd_nithvar (if bdd_varnum() <= x then (setvarnum (x + 1); x) else x)
 let bdd_relprod q =
   let qbdd = ref bdd_one and n = ref 0 in 
   fun a b -> 
