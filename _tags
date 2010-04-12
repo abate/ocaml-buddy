@@ -1,0 +1,2 @@
+<solver.native> or <solver.byte>: c_use_bdd
+<libbdd_stubs.c>: gcc
