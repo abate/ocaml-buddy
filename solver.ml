@@ -32,7 +32,6 @@ let split str ch =
 
 let fold_left f = function
   |h::t -> List.fold_left f h t
-  |[h] -> h
   |[] -> assert false
 
 let process_file file =
@@ -94,14 +93,28 @@ let process_file file =
 
 let solve file =
   Buddy.bdd_init ();
-  Buddy.bdd_autoreorder ();
+  (* Buddy.bdd_autoreorder (); *)
   let (vars,bdd) = process_file file in
+  (* Buddy.bdd_varblockall (); *)
+  Buddy.bdd_setvarorder [5;4;2];
+  Buddy.bdd_reorder ();
   let revs =
     let acc = Hashtbl.create (Hashtbl.length vars) in
     Hashtbl.iter (fun name v -> Hashtbl.add acc v name) vars ;
     acc
   in
-  Buddy.bdd_fprintdot stdout bdd;
+  let f a =
+    List.iter (fun (var,value) ->
+      Printf.printf "%s = %s\n"
+      (Hashtbl.find revs var)
+      (Buddy.string_of_value(value))
+    ) a
+    ;
+    Printf.printf "\n";
+  in
+  Buddy.bdd_allsat bdd f ;
+  Buddy.bdd_fprintdot (open_out ("out.dot")) bdd;
+
   Buddy.bdd_done ()
 ;;
 

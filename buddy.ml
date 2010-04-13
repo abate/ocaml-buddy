@@ -14,6 +14,9 @@ type bdd
 type bddpair
 type var = int
 
+type value = True | False | Unknown
+type solution = SAT | UNSAT | UNKNOWN
+
 (* from bdd.h *)
 
 let _BDDOP_AND = 0
@@ -71,7 +74,7 @@ external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex"
 
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
 
-external bdd_allsat : bdd -> (var array -> unit) -> unit = "wrapper_bdd_allsat"
+external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
 external bdd_satcount : bdd -> int = "wrapper_bdd_satcount"
 external bdd_satcountln : bdd -> float = "wrapper_bdd_satcount"
 
@@ -88,6 +91,8 @@ external bdd_replace : bdd -> bddpair -> bdd = "wrapper_bdd_replace"
 external bdd_varblockall : unit -> unit = "wrapper_bdd_varblockall"
 external bdd_addvarblock : bdd -> int -> int = "wrapper_bdd_addvarblock"
 external bdd_intaddvarblock : int -> int -> int -> int = "wrapper_bdd_intaddvarblock"
+external bdd_setvarorder : int list -> unit = "wrapper_bdd_setvarorder"
+external bdd_reorder : int -> int = "wrapper_bdd_reorder"
 external bdd_autoreorder : int -> int = "wrapper_bdd_autoreorder"
 external bdd_enable_reorder : unit -> unit = "wrapper_bdd_enable_reorder"
 external bdd_disable_reorder : unit -> unit = "wrapper_bdd_disable_reorder"
@@ -114,9 +119,10 @@ external bdd_addclause : bdd list -> bdd -> unit = "wrapper_bdd_addclause"
 
 external bdd_createset : (int -> bool) -> bdd = "wrapper_bdd_createset"
 
-(* utility functions *)
-
-let bdd_init ?(nodenum=1000) ?(cachesize=100) () = bdd_init nodenum cachesize ;;
+let bdd_init ?(nodenum=1000) ?(cachesize=100) () = 
+  bdd_init nodenum cachesize;
+  ignore(bdd_reorder_verbose(0))
+;;
 
 type reorder_strategy = Win2 | Win2ite | Win3 | Win3ite | Sift | Siftite | Random
 let int_of_strategy = function
@@ -132,13 +138,30 @@ let bdd_autoreorder ?(strategy=Win2ite) () =
   let str = int_of_strategy(strategy) in
   ignore(bdd_autoreorder str)
 
+let bdd_reorder ?(strategy=Win2ite) () =
+  let str = int_of_strategy(strategy) in
+  ignore(bdd_reorder str)
+
 let varcount = ref 0
 let bdd_newvar () = 
-  incr varcount;
-  if bdd_varnum() <= !varcount then 
-    (bdd_setvarnum (!varcount + 1); !varcount)
-  else !varcount
+  let v = 
+    if bdd_varnum() <= !varcount then 
+      (bdd_setvarnum (!varcount + 1); !varcount)
+    else !varcount
+  in
+  incr varcount; v
 ;;
+
+let value_of_var = function
+  |  0 -> False
+  |  1 -> True
+  | -1 -> Unknown
+  | _ -> assert false
+
+let string_of_value = function
+  |False -> "false"
+  |True -> "true"
+  |Unknown -> "unknown"
 
 let bdd_true = bdd_true ()
 let bdd_false = bdd_false ()

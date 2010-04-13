@@ -16,6 +16,12 @@ type bdd
 type bddpair
 type var
 
+type value = True | False | Unknown
+type solution = SAT | UNSAT | UNKNOWN
+
+val value_of_var : var -> value
+val string_of_value : value -> string
+
 (** reordering strategy used by [bdd_autoreorder] *)
 type reorder_strategy =
   |Win2    (** Reordering using a sliding window of size 2. This algorithm swaps
@@ -106,6 +112,7 @@ external bdd_addclause : bdd list -> bdd -> unit = "wrapper_bdd_addclause"
 
 (* external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex" *)
 
+external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
 external bdd_restrict : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 
@@ -131,14 +138,19 @@ external bdd_replace : bdd -> bddpair -> bdd = "wrapper_bdd_replace"
 (** Add a variable block for all variables. *)
 external bdd_varblockall : unit -> unit = "wrapper_bdd_varblockall"
 
-(** Adds a new variable block for reordering.  *)
+(** Add a new variable block for reordering.  *)
 external bdd_addvarblock : bdd -> int -> int = "wrapper_bdd_addvarblock"
 
-(** Adds a new variable block for reordering. *)
+(** Add a new variable block for reordering. *)
 external bdd_intaddvarblock : int -> int -> int -> int = "wrapper_bdd_intaddvarblock"
 
-(** Enables automatic reordering.  *)
+(** Start dynamic reordering.   *)
+val bdd_reorder : ?strategy : reorder_strategy -> unit -> unit
+
+(** Enable automatic reordering.  *)
 val bdd_autoreorder : ?strategy : reorder_strategy -> unit -> unit
+
+external bdd_setvarorder : int list -> unit = "wrapper_bdd_setvarorder"
 
 (** Enables automatic reordering. *)
 external bdd_enable_reorder : unit -> unit = "wrapper_bdd_enable_reorder"

@@ -8,7 +8,7 @@ PROGS = _build/solver.byte
 PROGS_OPT = _build/solver.native
 RESULTS = $(LIBS) $(PROGS)
 RESULTS_OPT = $(LIBS_OPT) $(PROGS_OPT)
-SOURCES = $(wildcard *.ml *.mli)
+SOURCES = $(wildcard *.ml *.mli) *.c
 
 OCAMLBUILD = ocamlbuild
 OBFLAGS = -classic-display
@@ -46,7 +46,7 @@ docs:
 	ocamldoc $(OCFLAGS) -html -d doc $(NAME).mli
 
 headers: header.txt .headache.conf
-	headache -h header.txt -c .headache.conf $(SOURCES) *.c
+	headache -h header.txt -c .headache.conf $(SOURCES)
 
 INSTALL_STUFF = META
 INSTALL_STUFF += $(wildcard _build/*$(NAME)*.cma _build/$(NAME).cmxa _build/*$(NAME)*.a)
