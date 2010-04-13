@@ -45,6 +45,9 @@ docs:
 	if [ ! -d doc ]; then mkdir doc; fi
 	ocamldoc $(OCFLAGS) -html -d doc $(NAME).mli
 
+headers: header.txt .headache.conf
+	headache -h header.txt -c .headache.conf $(SOURCES) *.c
+
 INSTALL_STUFF = META
 INSTALL_STUFF += $(wildcard _build/*$(NAME)*.cma _build/$(NAME).cmxa _build/*$(NAME)*.a)
 INSTALL_STUFF += $(wildcard _build/*$(NAME)*.cmi) $(wildcard *.mli)

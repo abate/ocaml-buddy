@@ -1,6 +1,6 @@
 (**************************************************************************)
-(*  debcudf - Debian Packages file to CUDF conversion tool                *)
-(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>        *)
+(*  Copyright (C) 2008 Akihiko Tozawa and Masami Hagiya.                  *)
+(*  Copyright (C) 2009 2010 Pietro Abate <pietro.abate@pps.jussieu.fr     *)
 (*                                                                        *)
 (*  This library is free software: you can redistribute it and/or modify  *)
 (*  it under the terms of the GNU Lesser General Public License as        *)

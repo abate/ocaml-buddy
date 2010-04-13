@@ -1,29 +1,38 @@
+(**************************************************************************)
+(*  Copyright (C) 2008 Akihiko Tozawa and Masami Hagiya.                  *)
+(*  Copyright (C) 2009 2010 Pietro Abate <pietro.abate@pps.jussieu.fr     *)
+(*                                                                        *)
+(*  This library is free software: you can redistribute it and/or modify  *)
+(*  it under the terms of the GNU Lesser General Public License as        *)
+(*  published by the Free Software Foundation, either version 3 of the    *)
+(*  License, or (at your option) any later version.  A special linking    *)
+(*  exception to the GNU Lesser General Public License applies to this    *)
+(*  library, see the COPYING file for more information.                   *)
+(**************************************************************************)
 
 (** documentation from http://buddy.sourceforge.net/manual/modules.html *)
 
 type bdd
 type bddpair
+type var
 
-val _BDDOP_AND : int
-val _BDDOP_XOR : int
-val _BDDOP_OR : int
-val _BDDOP_NAND : int
-val _BDDOP_NOR : int
-val _BDDOP_IMP : int
-val _BDDOP_BIIMP : int
-val _BDDOP_DIFF : int
-val _BDDOP_LESS : int
-val _BDDOP_INVIMP : int
-val _BDD_REORDER_NONE : int
-val _BDD_REORDER_WIN2 : int
-val _BDD_REORDER_WIN2ITE : int
-val _BDD_REORDER_SIFT : int
-val _BDD_REORDER_SIFTITE : int
-val _BDD_REORDER_WIN3 : int
-val _BDD_REORDER_WIN3ITE : int
-val _BDD_REORDER_RANDOM : int
-val _BDD_REORDER_FREE : int
-val _BDD_REORDER_FIXED : int
+(** reordering strategy used by [bdd_autoreorder] *)
+type reorder_strategy =
+  |Win2    (** Reordering using a sliding window of size 2. This algorithm swaps
+               two adjacent variable blocks and if this results in more nodes then the two
+               blocks are swapped back again. Otherwise the result is kept in the variable
+               order. This is then repeated for all variable blocks *)
+  |Win2ite (** The same as above but the process is repeated until no further
+               progress is done. Usually a fast and efficient method. *)
+  |Win3    (** The same as above but with a window size of 3. *)
+  |Win3ite (** The same as above but with a window size of 3. *)
+  |Sift    (** Reordering where each block is moved through all possible positions.
+               The best of these is then used as the new position. Potentially a very slow
+               but good method. *)
+  |Siftite (** The same as above but the process is repeated until no further
+               progress is done. Can be extremely slow. *)
+  |Random  (** Mostly used for debugging purpose, but may be usefull for others.
+               Selects a random position for each variable. *)
 
 (** Initializes the bdd package. The [nodenum] parameter sets the initial number 
 of BDD nodes and [cachesize] sets the size of the caches used for the BDD 
@@ -36,50 +45,84 @@ Good initial values are :
     * Medium sized examples: nodenum = 100000, cachesize = 10000
     * Large examples: nodenum = 1000000, cachesize = variable
 *)
-val init : ?nodenum : int -> ?cachesize : int -> unit -> unit
+val bdd_init : ?nodenum : int -> ?cachesize : int -> unit -> unit
 
 (** Resets the bdd package.  *)
-val reset : unit -> unit 
+val bdd_done : unit -> unit 
 
 (** Set the number of used bdd variables. After the initialization a call must be 
     done to bdd_setvarnum to define how many variables to use in this session. 
     This number may be increased later on either by calls to setvarnum.
 *)
-external setvarnum : int -> unit = "wrapper_bdd_setvarnum"
+external bdd_setvarnum : int -> unit = "wrapper_bdd_setvarnum"
 
 (** Returns the number of defined variables. *) 
 external bdd_varnum : unit -> int = "wrapper_bdd_varnum"
 
-(** Returns a bdd representing the i'th variable. The BDDs returned from 
-    bdd_ithvar can then be used to form new BDDs by calling bdd_OP where
-    OP may be bddop_and or any of the other operators
-*)
-external bdd_ithvar : int -> bdd = "wrapper_bdd_ithvar"
+(** BDD operations *)
 
-(** Returns a bdd representing the negation of the i'th variable.  *)
-external bdd_nithvar : int -> bdd = "wrapper_bdd_nithvar"
+(** Return a fresh variable. Increment the number of variables available in this 
+   session if needed *)
+val bdd_newvar : unit -> var
+
+(** [bdd_pos x] Returns the bdd representing the variable [x]. Alias of [ithvar] *)
+val bdd_pos : var -> bdd
+
+(** [bdd_neg x] Returns the bdd representing the negation of the variable [x].
+    Alias of [nithvar] *)
+val bdd_neg : var -> bdd
 
 (** Returns the constant true bdd. *)
-external bdd_true : unit -> bdd = "wrapper_bdd_true"
+val bdd_true : bdd
 
 (** Returns the constant false bdd. *)
-external bdd_false : unit -> bdd = "wrapper_bdd_false"
+val bdd_false : bdd
 
+(** The logical negation of a bdd.  *)
 external bdd_not : bdd -> bdd = "wrapper_bdd_not"
+
+(** The logical 'and' of two bdds.  *)
 external bdd_and : bdd -> bdd -> bdd = "wrapper_bdd_and"
+
+(** The logical 'or' of two bdds.  *)
 external bdd_or : bdd -> bdd -> bdd = "wrapper_bdd_or"
+
+(** The logical 'xor' of two bdds.  *)
 external bdd_xor : bdd -> bdd -> bdd = "wrapper_bdd_xor"
+
+(** The logical 'implication' of two bdds.  *)
 external bdd_imp : bdd -> bdd -> bdd = "wrapper_bdd_imp"
 
+(** The logical 'bi-implication' of two bdds.  *)
 external bdd_biimp : bdd -> bdd -> bdd = "wrapper_bdd_biimp"
+
+(** If-then-else operator. Calculates the BDD for the expression 
+    $(f \land g) \lor (\lnot f \land h)$ more efficiently than doing 
+    the three operations separately.
+*)
 external bdd_ite : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_ite"
-external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex"
+
+external bdd_addclause : bdd list -> bdd -> unit = "wrapper_bdd_addclause"
+
+(* external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex" *)
+
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
 external bdd_restrict : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
-external bdd_var : bdd -> int = "wrapper_bdd_var"
+
+(** Gets the variable labeling the bdd. *)
+external bdd_var : bdd -> var = "wrapper_bdd_var"
+
+(** [bdd_low r] gets the true branch of the bdd r. *)
 external bdd_high : bdd -> bdd = "wrapper_bdd_high"
+
+(** [bdd_low r] gets the false branch of the bdd r. *)
 external bdd_low : bdd -> bdd = "wrapper_bdd_low"
+
+(** Returns the variable support of a bdd.
+    [bdd_support r] finds all the variables that r depends on. 
+    That is the support of r. *)
 external bdd_support : bdd -> bdd = "wrapper_bdd_support"
+
 external bdd_nodecount : bdd -> int = "wrapper_bdd_nodecount"
 external bdd_newpair : unit -> bddpair = "wrapper_bdd_newpair"
 external bdd_setpair : bddpair -> int -> int -> int = "wrapper_bdd_setpair"
@@ -94,8 +137,8 @@ external bdd_addvarblock : bdd -> int -> int = "wrapper_bdd_addvarblock"
 (** Adds a new variable block for reordering. *)
 external bdd_intaddvarblock : int -> int -> int -> int = "wrapper_bdd_intaddvarblock"
 
-(** Enables automatic reordering. *)
-external bdd_autoreorder : int -> int = "wrapper_bdd_autoreorder"
+(** Enables automatic reordering.  *)
+val bdd_autoreorder : ?strategy : reorder_strategy -> unit -> unit
 
 (** Enables automatic reordering. *)
 external bdd_enable_reorder : unit -> unit = "wrapper_bdd_enable_reorder"
@@ -118,19 +161,19 @@ external bdd_var2level : int -> int = "wrapper_bdd_var2level"
 external bdd_setmaxincrease : int -> int = "wrapper_bdd_setmaxincrease"
 external bdd_setcacheratio : int -> int = "wrapper_bdd_setcacheratio"
 
+external bdd_fprinttable : out_channel -> bdd -> unit = "wrapper_bdd_fprinttable"
+external bdd_fprintdot : out_channel -> bdd -> unit = "wrapper_bdd_fprintdot"
+external bdd_fprintset : out_channel -> bdd -> unit = "wrapper_bdd_fprintset"
+
+(*
+external bdd_load : in_channel -> bdd = "wrapper_bdd_load"
+external bdd_save : in_channel -> bdd = "wrapper_bdd_save"
+*)
+
 (** create a conjunction of positive variables *)
 external bdd_createset : (int -> bool) -> bdd = "wrapper_bdd_createset"
 
 (** Utility functions *)
-
-(* return a fresh variable. Increment the number of variables available in this 
-   session if needed *)
-val new_var : unit -> int
-
-val bdd_zero : bdd
-val bdd_one : bdd
-val bdd_pos : int -> bdd
-val bdd_neg : int -> bdd
 
 val bdd_relprod : (int -> bool) -> bdd -> bdd -> bdd
 exception EmptyBdd

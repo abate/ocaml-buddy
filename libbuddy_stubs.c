@@ -1,3 +1,15 @@
+/**************************************************************************/
+/*  Copyright (C) 2008 Akihiko Tozawa and Masami Hagiya.                  */
+/*  Copyright (C) 2009 2010 Pietro Abate <pietro.abate@pps.jussieu.fr     */
+/*                                                                        */
+/*  This library is free software: you can redistribute it and/or modify  */
+/*  it under the terms of the GNU Lesser General Public License as        */
+/*  published by the Free Software Foundation, either version 3 of the    */
+/*  License, or (at your option) any later version.  A special linking    */
+/*  exception to the GNU Lesser General Public License applies to this    */
+/*  library, see the COPYING file for more information.                   */
+/**************************************************************************/
+
 #include <stdio.h>
 #include <string.h>
 
@@ -8,6 +20,33 @@
 #include <caml/custom.h>
 
 #include <bdd.h>
+
+/* Snippet taken from byterun/io.h of OCaml 3.11 */
+
+#ifndef IO_BUFFER_SIZE
+#define IO_BUFFER_SIZE 4096
+#endif
+
+#include <sys/types.h>
+#include <unistd.h>
+typedef off_t file_offset;
+
+struct channel {
+  int fd;                       /* Unix file descriptor */
+  file_offset offset;           /* Absolute position of fd in the file */
+  char * end;                   /* Physical end of the buffer */
+  char * curr;                  /* Current position in the buffer */
+  char * max;                   /* Logical end of the buffer (for input) */
+  void * mutex;                 /* Placeholder for mutex (for systhreads) */
+  struct channel * next, * prev;/* Double chaining of channels (flush_all) */
+  int revealed;                 /* For Cash only */
+  int old_revealed;             /* For Cash only */
+  int refcount;                 /* For flush_all and for Cash */
+  int flags;                    /* Bitfield */
+  char buff[IO_BUFFER_SIZE];    /* The buffer itself */
+};
+
+#define Channel(v) (*((struct channel **) (Data_custom_val(v))))
 
 /* global variables (initialized by wrapper_bdd_init) */
 
@@ -56,6 +95,19 @@ void wrapper_deletebddpair(value v)
 {
   bddPair* x = *((bddPair**)Data_custom_val(v));
   bdd_freepair(x);
+}
+
+/* converts a Caml channel to a C FILE* stream */
+static FILE * stream_of_channel(value chan, const char * mode)
+{
+  int des ;
+  FILE * res ;
+  struct channel *c_chan = Channel(chan) ;
+  if(c_chan==NULL)
+    return NULL;
+  des = dup(c_chan->fd) ;
+  res = fdopen(des, mode) ;
+  return res ;
 }
 
 /* wrappers */
@@ -107,6 +159,44 @@ CAMLprim value wrapper_bdd_newpair() {
   CAMLreturn(r);
 }
 
+CAMLprim value wrapper_bdd_fprinttable(value out, value bdd) {
+  CAMLparam2(out, bdd);
+  BDD x = *((BDD*)Data_custom_val(bdd));
+  bdd_fprinttable(stream_of_channel(out,"wb"), x);
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value wrapper_bdd_fprintset(value out, value bdd) {
+  CAMLparam2(out, bdd);
+  BDD x = *((BDD*)Data_custom_val(bdd));
+  bdd_fprintset(stream_of_channel(out,"wb"), x);
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value wrapper_bdd_fprintdot(value out, value bdd) {
+  CAMLparam2(out, bdd);
+  BDD x = *((BDD*)Data_custom_val(bdd));
+  bdd_fprintdot(stream_of_channel(out,"wb"), x);
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value wrapper_bdd_addclause(value clause, value bdd) {
+  CAMLparam2(clause,bdd);
+  CAMLlocal2(l,r);
+  BDD e,x;
+  l = clause;
+  while (l != Val_emptylist) {
+    x = ((int)(Field((clause), 0)));
+    e = bdd_or(x, bdd);
+    bdd_delref(bdd);
+    bdd_addref(e);
+    bdd = e;
+    l = ((int)(Field((clause), 1)));
+  }
+  wrapper_makebdd(&r, bdd);
+  CAMLreturn(r);
+}
+
 /* 
  * creating a set representing bdd
  * (this is here to demonstrate callback)
@@ -123,7 +213,8 @@ CAMLprim value wrapper_bdd_createset(value q) {
       v = bdd_level2var(l);
       if (Bool_val(callback(q, Val_int(v)))) 
         {
-          e = bdd_and(bdd_ithvar(v), d); /* bdd_ithvar is always reference-counted */
+          /* bdd_ithvar is always reference-counted */
+          e = bdd_and(bdd_ithvar(v), d); 
           bdd_delref(d);
           bdd_addref(e);
           d = e;
@@ -232,6 +323,8 @@ FUN1(bdd_high, bdd, bdd)
 FUN1(bdd_low, bdd, bdd)
 FUN1(bdd_support, bdd, bdd)
 FUN1(bdd_nodecount, bdd, int)
+FUN1(bdd_satcount, bdd, int)
+FUN1(bdd_satcountln, bdd, int)
 FUN3(bdd_setpair, bddpair, int, int, int)
 FUN2(bdd_replace, bdd, bddpair, bdd)
 
