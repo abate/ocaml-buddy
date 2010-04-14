@@ -246,7 +246,7 @@ CAMLprim value wrapper_bdd_allsat(value r, value f) {
     int i;
     tl = Val_emptylist;
     for (i = 0 ; i < size; i++) {
-      // printf("%d : %d\n", i, varset[i]);
+      //printf("%d : %d\n", i, varset[i]);
       tl = append(tuple(Val_int(i),Val_int(varset[i])),tl);
     }
     callback(f,tl);

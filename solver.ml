@@ -96,7 +96,7 @@ let solve file =
   (* Buddy.bdd_autoreorder (); *)
   let (vars,bdd) = process_file file in
   (* Buddy.bdd_varblockall (); *)
-  Buddy.bdd_setvarorder [5;4;2];
+  (* Buddy.bdd_setvarorder [5;4;2]; *)
   Buddy.bdd_reorder ();
   let revs =
     let acc = Hashtbl.create (Hashtbl.length vars) in
