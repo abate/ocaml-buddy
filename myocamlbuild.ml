@@ -11,9 +11,6 @@
 (**************************************************************************)
 
 open Ocamlbuild_plugin
-open Command (* no longer needed for OCaml >= 3.10.2 *)
-
-let clibs = [("bdd","bdd")]
 
 (* these functions are not really officially exported *)
 let run_and_read = Ocamlbuild_pack.My_unix.run_and_read
@@ -69,30 +66,20 @@ let _ = dispatch begin function
          flag ["ocaml"; "doc";      "syntax_"^syntax] & S[A"-syntax"; A syntax];
        end (find_syntaxes ());
 
-       List.iter begin fun (lib,dir) ->
-         flag ["ocaml"; "link"; "c_use_"^lib; "byte"]
-         (S[A"-custom"; A"-ccopt"; A("-L"^lib); A"-cclib"; A("-l"^lib)]);
+       flag ["ocaml"; "link"; "c_use_bdd"; "byte"]
+       (S[A"-custom"; A"-ccopt"; A("-Lbdd"); A"-cclib"; A("-lbdd")]);
 
-         flag ["ocaml"; "link"; "c_use_"^lib; "native"]
-         (S[A"-ccopt"; A("-L"^lib); A"-cclib"; A("-l"^lib)]);
+       flag ["ocaml"; "link"; "c_use_bdd"; "native"]
+       (S[A"-ccopt"; A("-Lbdd"); A"-cclib"; A("-lbdd")]);
 
-         flag [ "byte"; "library"; "link" ]
-         (S[A"-dllib"; A("-l"^lib); A"-cclib"; A("-l"^lib^"stubs")]);
+       flag [ "byte"; "library"; "link" ]
+       (S[A"-dllib"; A("-lbdd"); A"-cclib"; A("-lbuddystubs")]);
 
-         flag [ "native"; "library"; "link" ]
-         (S[A"-cclib"; A("-l"^lib); A"-cclib"; A("-l"^lib^"_stubs")]);
+       flag [ "native"; "library"; "link" ]
+       (S[A"-cclib"; A("-lbdd"); A"-cclib"; A("-lbuddy_stubs")]);
 
-         (* Make sure the C pieces is built... *)
-         if Sys.file_exists dir then begin
-           dep  ["ocaml"; "compile"; "c_use_"^lib] [dir^"/libbuddy_stubs.a"];
-           dep  ["ocaml"; "link"; "c_use_"^lib] [dir^"/libbuddy_stubs.a"];
-         end
-         else begin
-           dep  ["ocaml"; "compile"; "c_use_bdd"] ["libbuddy_stubs.a"];
-           dep  ["ocaml"; "link"; "c_use_bdd"] ["libbuddy_stubs.a"];
-         end
-
-       end clibs ;
+       dep  ["ocaml"; "compile"; "c_use_bdd"] ["libbuddy_stubs.a"];
+       dep  ["ocaml"; "link"; "c_use_bdd"] ["libbuddy_stubs.a"];
 
        (* The default "thread" tag is not compatible with ocamlfind.
           Indeed, the default rules add the "threads.cma" or "threads.cmxa"
