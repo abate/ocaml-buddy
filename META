@@ -1,5 +1,5 @@
 name="Buddy"
-version="0.8"
+version="0.1"
 description="Ocaml bindings to Buddy"
 requires=""
 archive(byte) = "buddy.cma"

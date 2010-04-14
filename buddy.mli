@@ -114,6 +114,7 @@ external bdd_addclause : bdd list -> bdd -> unit = "wrapper_bdd_addclause"
 
 external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
+external bdd_simplify : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 external bdd_restrict : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 
 (** Gets the variable labeling the bdd. *)

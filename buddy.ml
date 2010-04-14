@@ -79,6 +79,7 @@ external bdd_satcount : bdd -> int = "wrapper_bdd_satcount"
 external bdd_satcountln : bdd -> float = "wrapper_bdd_satcount"
 
 external bdd_restrict : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
+external bdd_simplify : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 external bdd_var : bdd -> int = "wrapper_bdd_var"
 external bdd_high : bdd -> bdd = "wrapper_bdd_high"
 external bdd_low : bdd -> bdd = "wrapper_bdd_low"
