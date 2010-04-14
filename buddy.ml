@@ -14,7 +14,7 @@ type bdd
 type bddpair
 type var = int
 
-type value = True | False | Unknown
+type value = False | True | Unknown
 type solution = SAT | UNSAT | UNKNOWN
 
 (* from bdd.h *)
@@ -160,8 +160,8 @@ let value_of_var = function
   | _ -> assert false
 
 let string_of_value = function
-  |False -> "false"
   |True -> "true"
+  |False -> "false"
   |Unknown -> "unknown"
 
 let bdd_true = bdd_true ()

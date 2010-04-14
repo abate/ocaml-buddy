@@ -242,12 +242,18 @@ CAMLprim value wrapper_bdd_allsat(value r, value f) {
   CAMLparam2(r,f);
   BDD bdd = *((BDD*)Data_custom_val(r));
   void handler(char* varset, int size) {
-    CAMLlocal1(tl);
+    CAMLlocal2(tl,v);
     int i;
     tl = Val_emptylist;
     for (i = 0 ; i < size; i++) {
-      //printf("%d : %d\n", i, varset[i]);
-      tl = append(tuple(Val_int(i),Val_int(varset[i])),tl);
+      // printf("%d : %d\n", i, varset[i]);
+      // variants in ocaml range from 0 to n-1 !!!
+      switch (varset[i]) {
+        case 0 : v = Val_int(0); break; // False
+        case 1 : v = Val_int(1); break; // True
+        case -1 : v = Val_int(2); break; //Unknown
+      }
+      tl = append(tuple(Val_int(i),v),tl);
     }
     callback(f,tl);
     return;

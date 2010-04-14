@@ -16,7 +16,7 @@ type bdd
 type bddpair
 type var
 
-type value = True | False | Unknown
+type value = False | True | Unknown
 type solution = SAT | UNSAT | UNKNOWN
 
 val value_of_var : var -> value
