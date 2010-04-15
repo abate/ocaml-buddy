@@ -14,7 +14,7 @@
 
 type bdd
 type bddpair
-type var
+type var = int
 
 type value = False | True | Unknown
 type solution = SAT | UNSAT | UNKNOWN
@@ -115,20 +115,25 @@ external bdd_addclause : bdd list -> bdd -> unit = "wrapper_bdd_addclause"
 external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
 external bdd_simplify : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
-external bdd_restrict : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 
-(** Gets the variable labeling the bdd. *)
+(** [bdd_var r] gets the top level variable of the [r]. *)
 external bdd_var : bdd -> var = "wrapper_bdd_var"
 
-(** [bdd_low r] gets the true branch of the bdd r. *)
+(** [bdd_low r] gets the true branch of the top level variable of [r]. *)
 external bdd_high : bdd -> bdd = "wrapper_bdd_high"
 
-(** [bdd_low r] gets the false branch of the bdd r. *)
+(** [bdd_low r] gets the false branch of the top lelve variable of [r]. *)
 external bdd_low : bdd -> bdd = "wrapper_bdd_low"
 
-(** Returns the variable support of a bdd.
-    [bdd_support r] finds all the variables that r depends on. 
-    That is the support of r. *)
+(* [bdd_restrict r var] restricts the variables in [r] to constant true or false. How 
+   this is done depends on how the variables are included in the variable set
+   var. If they are included in their positive form then they are restricted to
+   true and vice versa. In other words, for each variable in var, it selects
+   either the true or false branch of [r] wrt the polarity. *)
+external bdd_restrict : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
+
+(** Returns the variable support of a bdd. [bdd_support r] finds all the 
+    variables that r depends on. That is the support of r. *)
 external bdd_support : bdd -> bdd = "wrapper_bdd_support"
 
 external bdd_nodecount : bdd -> int = "wrapper_bdd_nodecount"
