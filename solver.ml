@@ -75,7 +75,8 @@ let process_file file =
         ) lits
       with Not_found -> assert false
     in
-    fold_left (fun acc b -> Buddy.bdd_or acc b) lits 
+    Buddy.bdd_addclause lits 
+    (* fold_left (fun acc b -> Buddy.bdd_or acc b) lits *)
   in
 
   (* Read a new line and processes its content. *)
@@ -113,7 +114,9 @@ let solve file =
     Printf.printf "\n";
   in
   Buddy.bdd_allsat bdd f ;
-  Buddy.bdd_fprintdot (open_out ("out.dot")) bdd;
+  let ch = open_out ("out.dot") in
+  Buddy.bdd_fprintdot ch bdd;
+  close_out ch;
 
   Buddy.bdd_done ()
 ;;

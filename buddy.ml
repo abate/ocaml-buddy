@@ -114,7 +114,7 @@ external bdd_load : in_channel -> bdd = "wrapper_bdd_load"
 external bdd_save : in_channel -> bdd = "wrapper_bdd_save"
 *)
 
-external bdd_addclause : bdd list -> bdd -> unit = "wrapper_bdd_addclause"
+external bdd_addclause : bdd list -> bdd = "wrapper_bdd_addclause"
 
 (* create a conjunction of positive variables *)
 
