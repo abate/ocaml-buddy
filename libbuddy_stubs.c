@@ -228,7 +228,7 @@ CAMLprim value wrapper_bdd_addclause(value clause) {
     while (clause != Val_emptylist) {
       x = *((BDD*)Data_custom_val((Field(clause, 0))));
       e = bdd_or(x, bdd);
-      bdd_delref(bdd);
+      //bdd_delref(bdd);
       bdd_addref(e);
       bdd = e;
       clause = Field(clause, 1);
@@ -249,8 +249,8 @@ CAMLprim value wrapper_bdd_allsat(value r, value f) {
       // printf("%d : %d\n", i, varset[i]);
       // variants in ocaml range from 0 to n-1 !!!
       switch (varset[i]) {
-        case 0 : v = Val_int(0); break; // False
-        case 1 : v = Val_int(1); break; // True
+        case  0 : v = Val_int(0); break; // False
+        case  1 : v = Val_int(1); break; // True
         case -1 : v = Val_int(2); break; //Unknown
       }
       tl = append(tuple(Val_int(i),v),tl);
