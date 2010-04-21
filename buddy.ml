@@ -114,7 +114,10 @@ external bdd_load : in_channel -> bdd = "wrapper_bdd_load"
 external bdd_save : in_channel -> bdd = "wrapper_bdd_save"
 *)
 
-external bdd_addclause : bdd list -> bdd = "wrapper_bdd_addclause"
+external bdd_bigapply : bdd list -> int -> bdd = "wrapper_bdd_bigapply"
+
+let bdd_bigand bdd = bdd_bigapply bdd _BDDOP_AND
+let bdd_bigor bdd = bdd_bigapply bdd _BDDOP_OR
 
 (* create a conjunction of positive variables *)
 

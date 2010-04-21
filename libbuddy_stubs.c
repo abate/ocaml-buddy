@@ -216,8 +216,8 @@ CAMLprim value wrapper_bdd_setvarorder(value neworder) {
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value wrapper_bdd_addclause(value clause) {
-  CAMLparam1(clause);
+CAMLprim value wrapper_bdd_bigapply(value clause, value op) {
+  CAMLparam2(clause,op);
   CAMLlocal1(r);
   BDD e,x;
   if (clause == Val_emptylist) {
@@ -227,7 +227,8 @@ CAMLprim value wrapper_bdd_addclause(value clause) {
     clause = Field(clause, 1);
     while (clause != Val_emptylist) {
       x = *((BDD*)Data_custom_val((Field(clause, 0))));
-      e = bdd_or(x, bdd);
+      e = bdd_apply(x,bdd,Int_val(op));
+      //e = bdd_or(x, bdd);
       //bdd_delref(bdd);
       bdd_addref(e);
       bdd = e;
@@ -251,7 +252,7 @@ CAMLprim value wrapper_bdd_allsat(value r, value f) {
       switch (varset[i]) {
         case  0 : v = Val_int(0); break; // False
         case  1 : v = Val_int(1); break; // True
-        case -1 : v = Val_int(2); break; //Unknown
+        case -1 : v = Val_int(2); break; // Unknown
       }
       tl = append(tuple(Val_int(i),v),tl);
     }

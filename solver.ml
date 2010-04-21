@@ -75,7 +75,7 @@ let process_file file =
         ) lits
       with Not_found -> assert false
     in
-    Buddy.bdd_addclause lits 
+    Buddy.bdd_bigor lits 
     (* fold_left (fun acc b -> Buddy.bdd_or acc b) lits *)
   in
 

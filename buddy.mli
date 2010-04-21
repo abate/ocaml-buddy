@@ -108,7 +108,8 @@ external bdd_biimp : bdd -> bdd -> bdd = "wrapper_bdd_biimp"
 *)
 external bdd_ite : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_ite"
 
-external bdd_addclause : bdd list -> bdd = "wrapper_bdd_addclause"
+val bdd_bigor : bdd list -> bdd
+val bdd_bigand : bdd list -> bdd
 
 (* external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex" *)
 
