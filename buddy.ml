@@ -17,6 +17,13 @@ type var = int
 type value = False | True | Unknown
 type solution = SAT | UNSAT | UNKNOWN
 
+exception IOError
+exception EmptyList
+let _ = 
+  Callback.register_exception "buddy_exn_IOError" IOError;
+  Callback.register_exception "buddy_exn_EmptyList" EmptyList;
+;;
+
 (* from bdd.h *)
 
 let _BDDOP_AND = 0
@@ -109,10 +116,8 @@ external bdd_fprinttable : out_channel -> bdd -> unit = "wrapper_bdd_fprinttable
 external bdd_fprintdot : out_channel -> bdd -> unit = "wrapper_bdd_fprintdot"
 external bdd_fprintset : out_channel -> bdd -> unit = "wrapper_bdd_fprintset"
 
-(*
+external bdd_save : out_channel -> bdd -> unit = "wrapper_bdd_save"
 external bdd_load : in_channel -> bdd = "wrapper_bdd_load"
-external bdd_save : in_channel -> bdd = "wrapper_bdd_save"
-*)
 
 external bdd_bigapply : bdd list -> int -> bdd = "wrapper_bdd_bigapply"
 

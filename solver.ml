@@ -114,10 +114,19 @@ let solve file =
     Printf.printf "\n";
   in
   Buddy.bdd_allsat bdd f ;
+  Printf.printf "Try to save it\n%!";
+  let ch = open_out ("out.bdd") in
+  Buddy.bdd_save ch bdd;
+  close_out ch;
+  Printf.printf "Try to load it\n%!";
+  let ch = open_in ("out.bdd") in
+  let bdd = Buddy.bdd_load ch in
+  close_in ch;
+  Printf.printf "Try to save it in dot format\n%!";
   let ch = open_out ("out.dot") in
   Buddy.bdd_fprintdot ch bdd;
   close_out ch;
-
+  Printf.printf "All done\n";
   Buddy.bdd_done ()
 ;;
 

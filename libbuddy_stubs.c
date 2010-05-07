@@ -124,6 +124,9 @@ static FILE * stream_of_channel(value chan, const char * mode)
     return NULL;
   des = dup(c_chan->fd) ;
   res = fdopen(des, mode) ;
+  if (des < 0 || res == NULL) {
+    perror("failed to duplicate caml channel"); exit(1);
+  }
   return res ;
 }
 
@@ -183,22 +186,50 @@ CAMLprim value wrapper_bdd_newpair() {
 CAMLprim value wrapper_bdd_fprinttable(value out, value bdd) {
   CAMLparam2(out, bdd);
   BDD x = *((BDD*)Data_custom_val(bdd));
-  bdd_fprinttable(stream_of_channel(out,"wb"), x);
+  FILE* f = stream_of_channel(out,"w");
+  bdd_fprinttable(f, x);
+  fflush(f);
   CAMLreturn(Val_unit);
 }
 
 CAMLprim value wrapper_bdd_fprintset(value out, value bdd) {
   CAMLparam2(out, bdd);
   BDD x = *((BDD*)Data_custom_val(bdd));
-  bdd_fprintset(stream_of_channel(out,"wb"), x);
+  FILE* f = stream_of_channel(out,"w");
+  bdd_fprintset(f, x);
+  fflush(f);
   CAMLreturn(Val_unit);
 }
 
 CAMLprim value wrapper_bdd_fprintdot(value out, value bdd) {
   CAMLparam2(out, bdd);
   BDD x = *((BDD*)Data_custom_val(bdd));
-  bdd_fprintdot(stream_of_channel(out,"wb"), x);
+  FILE* f = stream_of_channel(out,"w");
+  bdd_fprintdot(f, x);
+  fflush(f);
   CAMLreturn(Val_unit);
+}
+
+CAMLprim value wrapper_bdd_save(value out, value bdd) {
+  CAMLparam2(out, bdd);
+  BDD x = *((BDD*)Data_custom_val(bdd));
+  FILE* f = stream_of_channel(out,"w");
+  if (bdd_save(f, x) != 0) {
+    caml_raise_constant(*caml_named_value("buddy_exn_IOError"));
+  }
+  fflush(f);
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value wrapper_bdd_load(value in) {
+  CAMLparam1(in);
+  CAMLlocal1(r);
+  BDD x;
+  if (bdd_load(stream_of_channel(in,"r"), &x) != 0) {
+    caml_raise_constant(*caml_named_value("buddy_exn_IOError"));
+  }
+  wrapper_makebdd(&r, x);
+  CAMLreturn(r);
 }
 
 CAMLprim value wrapper_bdd_setvarorder(value neworder) {
@@ -221,15 +252,13 @@ CAMLprim value wrapper_bdd_bigapply(value clause, value op) {
   CAMLlocal1(r);
   BDD e,x;
   if (clause == Val_emptylist) {
-    CAMLreturn(r); /* XXX I know I know ... */
+    caml_raise_constant(*caml_named_value("buddy_exn_EmptyList"));
   } else {
     BDD bdd = *((BDD*)Data_custom_val((Field(clause, 0))));
     clause = Field(clause, 1);
     while (clause != Val_emptylist) {
       x = *((BDD*)Data_custom_val((Field(clause, 0))));
       e = bdd_apply(x,bdd,Int_val(op));
-      //e = bdd_or(x, bdd);
-      //bdd_delref(bdd);
       bdd_addref(e);
       bdd = e;
       clause = Field(clause, 1);
@@ -402,6 +431,7 @@ FUN1(bdd_satcount, bdd, int)
 FUN1(bdd_satcountln, bdd, int)
 FUN3(bdd_setpair, bddpair, int, int, int)
 FUN2(bdd_replace, bdd, bddpair, bdd)
+FUN3(bdd_compose, bdd, bdd, bdd, bdd)
 
 FUN2(bdd_addvarblock, bdd, int, int)
 FUN3(bdd_intaddvarblock, int, int, int, int)

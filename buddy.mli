@@ -184,10 +184,8 @@ external bdd_fprinttable : out_channel -> bdd -> unit = "wrapper_bdd_fprinttable
 external bdd_fprintdot : out_channel -> bdd -> unit = "wrapper_bdd_fprintdot"
 external bdd_fprintset : out_channel -> bdd -> unit = "wrapper_bdd_fprintset"
 
-(*
 external bdd_load : in_channel -> bdd = "wrapper_bdd_load"
-external bdd_save : in_channel -> bdd = "wrapper_bdd_save"
-*)
+external bdd_save : out_channel -> bdd -> unit = "wrapper_bdd_save"
 
 (** create a conjunction of positive variables *)
 external bdd_createset : (int -> bool) -> bdd = "wrapper_bdd_createset"
