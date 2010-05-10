@@ -113,7 +113,11 @@ val bdd_bigand : bdd list -> bdd
 
 (* external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex" *)
 
+(** Finds all satisfying variable assignments. [bdd_allsat r handler] iterates
+    through all legal variable assignments (those that make the BDD come true)
+    for the bdd [r] and calls the callback handler [handler] for each of them. *)
 external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
+
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
 external bdd_simplify : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 
