@@ -97,6 +97,10 @@ let solve file =
   (* Buddy.bdd_autoreorder (); *)
   let (vars,bdd) = process_file file in
   (* Buddy.bdd_varblockall (); *)
+  (* XXX setvarorder is broken !!! *)
+  let _b = Buddy.bdd_makeset [0;1;2] in
+  Buddy.bdd_fprintdot stdout _b ;
+
   (* Buddy.bdd_setvarorder [5;4;2]; *)
   Buddy.bdd_reorder ();
   let revs =

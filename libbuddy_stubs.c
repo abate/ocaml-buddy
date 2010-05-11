@@ -65,6 +65,13 @@ static inline value append( value hd, value tl ) {
   CAMLreturn(tuple( hd, tl ));
 }
 
+static inline int length (value l) {
+  CAMLparam1(l);
+  int len;
+  while (l != Val_emptylist) { len++ ; l = Field(l, 1); }
+  return len;
+}
+
 /* global variables (initialized by wrapper_bdd_init) */
 
 struct custom_operations bddops; /* custom GC-enabled type */
@@ -268,6 +275,22 @@ CAMLprim value wrapper_bdd_bigapply(value clause, value op) {
   CAMLreturn(r);
 }
 
+CAMLprim value wrapper_bdd_makeset(value varlist) {
+  CAMLparam1(varlist);
+  CAMLlocal1(r);
+  BDD bdd;
+  int varnum = length(varlist);
+  int varset[varnum];
+  int i = 0;
+  while (varlist != Val_emptylist) {
+    varset[i++] = Int_val(Field(varlist, 0));
+    varlist = Field(varlist, 1);
+  }
+  bdd = bdd_makeset (varset, varnum);
+  wrapper_makebdd(&r, bdd);
+  CAMLreturn(r);
+}
+
 CAMLprim value wrapper_bdd_allsat(value r, value f) {
   CAMLparam2(r,f);
   BDD bdd = *((BDD*)Data_custom_val(r));
@@ -420,6 +443,7 @@ FUN2(bdd_biimp, bdd, bdd, bdd)
 FUN3(bdd_ite, bdd, bdd, bdd, bdd)
 FUN4(bdd_appex, bdd, bdd, int, bdd, bdd)
 FUN1(bdd_satone, bdd, bdd)
+FUN3(bdd_satoneset, bdd, bdd, bdd, bdd)
 FUN2(bdd_restrict, bdd, bdd, bdd)
 FUN2(bdd_simplify, bdd, bdd, bdd)
 FUN1(bdd_var, bdd, int)

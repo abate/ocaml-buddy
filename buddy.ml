@@ -80,10 +80,12 @@ external bdd_ite : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_ite"
 external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex"
 
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
+external bdd_satoneset : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_satone"
 
 external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
 external bdd_satcount : bdd -> int = "wrapper_bdd_satcount"
-external bdd_satcountln : bdd -> float = "wrapper_bdd_satcount"
+external bdd_satcountln : bdd -> float = "wrapper_bdd_satcountln"
+external bdd_makeset : var list -> bdd = "wrapper_bdd_makeset"
 
 external bdd_restrict : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 external bdd_simplify : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
@@ -182,6 +184,12 @@ let bdd_relprod q =
   fun a b -> 
     if !n != bdd_varnum () then qbdd := bdd_createset q else ();
     bdd_appex a b _BDDOP_AND !qbdd
+;;
+
+let bdd_satoneset bdd vars = function
+  |true -> bdd_satoneset bdd (bdd_makeset vars) bdd_true
+  |false -> bdd_satoneset bdd (bdd_makeset vars) bdd_false
+;;
 
 exception EmptyBdd
 

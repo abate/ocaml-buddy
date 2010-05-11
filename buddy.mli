@@ -118,7 +118,24 @@ val bdd_bigand : bdd list -> bdd
     for the bdd [r] and calls the callback handler [handler] for each of them. *)
 external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
 
+(** [bdd_satone r] Finds one satisfying variable assignment. Finds a BDD with
+    at most one variable at each level. This BDD implies [r] and is not false
+    unless [r] is false. *)
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
+
+(** [bdd_satoneset r var pol] Finds one satisfying variable assignment. The
+    [var] argument is a variable list that defines a set of variables that 
+    must be mentioned in the result. The polarity of these variables in 
+    result --- in case they are undefined in [r] --- are defined by the 
+    [pol] parameter. If pol is false then the variables will be in negative 
+    form, and otherwise they will be in positive form. *)
+val bdd_satoneset : bdd -> var list -> bool -> bdd
+
+(** [bdd_makeset: l] Builds a bdd variable set from an var list. The BDD
+    variable set is represented as the conjunction of all the variables 
+    in their positive form and may just as well be made that way by the user. *)
+external bdd_makeset : var list -> bdd = "wrapper_bdd_makeset"
+
 external bdd_simplify : bdd -> bdd -> bdd = "wrapper_bdd_restrict"
 
 (** [bdd_var r] gets the top level variable of the [r]. *)
