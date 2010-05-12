@@ -61,3 +61,7 @@ install:
 
 uninstall:
 	$(UNINSTALL) $(NAME)
+
+test: _build/test.byte test.ml
+	_build/test.byte -verbose
+

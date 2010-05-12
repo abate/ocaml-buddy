@@ -1,2 +1,3 @@
 <solver.native> or <solver.byte>: c_use_bdd
+<test.*>: c_use_bdd, pkg_oUnit
 <libbuddy_stubs.c>: gcc
