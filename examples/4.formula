@@ -1,0 +1,9 @@
+# a -> b | c
+# a -> d
+
+v a
+v b
+v c
+v d
+c -a b c
+c -a d

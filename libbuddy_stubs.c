@@ -305,8 +305,11 @@ CAMLprim value wrapper_bdd_allsat(value r, value f) {
         case  0 : v = Val_int(0); break; // False
         case  1 : v = Val_int(1); break; // True
         case -1 : v = Val_int(2); break; // Unknown
+        default : caml_failwith("Unknown variable value"); break;
       }
-      tl = append(tuple(Val_int(i),v),tl);
+      if (varset[i] != -1) {
+        tl = append(tuple(Val_int(i),v),tl);
+      }
     }
     callback(f,tl);
     return;
