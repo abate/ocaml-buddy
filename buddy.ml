@@ -113,6 +113,7 @@ external bdd_var2level : int -> int = "wrapper_bdd_var2level"
 
 external bdd_setmaxincrease : int -> int = "wrapper_bdd_setmaxincrease"
 external bdd_setcacheratio : int -> int = "wrapper_bdd_setcacheratio"
+external bdd_isrunning : unit -> bool = "wrapper_bdd_isrunning"
 
 external bdd_fprinttable : out_channel -> bdd -> unit = "wrapper_bdd_fprinttable"
 external bdd_fprintdot : out_channel -> bdd -> unit = "wrapper_bdd_fprintdot"
@@ -130,9 +131,24 @@ let bdd_bigor bdd = bdd_bigapply bdd _BDDOP_OR
 
 external bdd_createset : (int -> bool) -> bdd = "wrapper_bdd_createset"
 
+let varcount = ref 0
+let bdd_newvar () = 
+  let v = 
+    if bdd_varnum() <= !varcount then 
+      (bdd_setvarnum (!varcount + 1); !varcount)
+    else !varcount
+  in
+  incr varcount; v
+;;
+
 let bdd_init ?(nodenum=1000) ?(cachesize=100) () = 
   bdd_init nodenum cachesize;
   ignore(bdd_reorder_verbose(0))
+;;
+
+let bdd_done () =
+  varcount := 0;
+  bdd_done ()
 ;;
 
 type reorder_strategy = Win2 | Win2ite | Win3 | Win3ite | Sift | Siftite | Random
@@ -152,16 +168,6 @@ let bdd_autoreorder ?(strategy=Win2ite) () =
 let bdd_reorder ?(strategy=Win2ite) () =
   let str = int_of_strategy(strategy) in
   ignore(bdd_reorder str)
-
-let varcount = ref 0
-let bdd_newvar () = 
-  let v = 
-    if bdd_varnum() <= !varcount then 
-      (bdd_setvarnum (!varcount + 1); !varcount)
-    else !varcount
-  in
-  incr varcount; v
-;;
 
 let value_of_var = function
   |  0 -> False
@@ -186,9 +192,9 @@ let bdd_relprod q =
     bdd_appex a b _BDDOP_AND !qbdd
 ;;
 
-let bdd_satoneset bdd vars = function
-  |true -> bdd_satoneset bdd (bdd_makeset vars) bdd_true
-  |false -> bdd_satoneset bdd (bdd_makeset vars) bdd_false
+let bdd_satoneset ?(pol=true) bdd vars =
+  let p = if pol then bdd_true else bdd_false in
+  bdd_satoneset bdd (bdd_makeset vars) p
 ;;
 
 exception EmptyBdd

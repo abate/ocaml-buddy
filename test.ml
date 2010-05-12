@@ -11,49 +11,70 @@
 
 open OUnit
 
-let bdd_builder = function
-  |1 ->
-  Printf.eprintf "builder %!\n";
-      Buddy.bdd_and
-      (Buddy.bdd_pos (Buddy.bdd_newvar ()))
-      (Buddy.bdd_pos (Buddy.bdd_newvar ()))
-  |_ -> assert_failure "Bdd_builder : Unknown Bdd"
+let reverse = Hashtbl.create 17 ;;
+let builder (vars,clauses) =
+  List.iter (fun v ->
+    let i = Buddy.bdd_newvar () in
+    Hashtbl.add reverse v i
+  ) vars ;
+  let bl = 
+    List.map (fun l ->
+      List.map (function
+        |(v,true) -> Buddy.bdd_pos (Hashtbl.find reverse v)
+        |(v,false) -> Buddy.bdd_neg (Hashtbl.find reverse v)
+      ) l 
+    ) clauses
+  in
+  Buddy.bdd_bigand (List.map Buddy.bdd_bigor bl)
 ;;
 
-let bdd_setup builder _ =
-  (* Buddy.bdd_init (); *)
-  Lazy.force builder
-;;
+module S = Set.Make(
+  struct
+    type t = (Buddy.var * Buddy.value)
+    let compare = compare
+  end
+)
 
-let bdd_teardown _ = Buddy.bdd_done () ;;
-
-let test testfun bdd =
-  let setup = bdd_setup (lazy(bdd_builder bdd)) in
-  let teardown = bdd_teardown in
-  bracket setup testfun teardown
-;;
-
-let bdd_allsat_test = 
-  let tt_real = [] in
+let bdd_allsat_test () = 
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
   let tt_test = ref [] in
   let f bdd =
     let ch l =
-      List.iter (fun ((var,value) as x) ->
-        tt_test :=  x :: !tt_test ;
+      tt_test :=  (List.sort compare l) :: !tt_test ;
+      List.iter (fun (var,value) ->
         Printf.printf "%d = %s\n" var (Buddy.string_of_value(value))
-      ) l
+      ) l;
+      Printf.printf "\n";
     in
+    Buddy.bdd_fprintset stdout bdd;
     Buddy.bdd_allsat bdd ch;
-    assert_equal tt_real !tt_test
+    assert_equal true true
   in
-  test f 1
+  f bdd;
+  Buddy.bdd_done ()
+;;
+
+let bdd_satoneset_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
+  let f bdd =
+    let b = Buddy.bdd_satoneset bdd [Hashtbl.find reverse "b"] in
+    Buddy.bdd_fprintdot stdout b;
+    assert_equal true true
+  in
+  f bdd ;
+  Buddy.bdd_done ()
 ;;
 
 let all =
   "all tests" >::: [ 
     "bdd_allsat" >:: bdd_allsat_test;
+    "bdd_allsat" >:: bdd_allsat_test; 
+    "bdd_satoneset" >:: bdd_satoneset_test;
     "bdd_satone" >:: (fun _ -> todo "");
-    "bdd_satoneset" >:: (fun _ -> todo "");
     "bdd_bigand" >:: (fun _ -> todo "");
     "bdd_bigor" >:: (fun _ -> todo "");
     "bdd_makeset" >:: (fun _ -> todo "");
@@ -61,7 +82,6 @@ let all =
   ]
 
 let main () =
-  Buddy.bdd_init ();
   OUnit.run_test_tt_main all
 ;;
 

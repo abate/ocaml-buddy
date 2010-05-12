@@ -132,7 +132,7 @@ static FILE * stream_of_channel(value chan, const char * mode)
   des = dup(c_chan->fd) ;
   res = fdopen(des, mode) ;
   if (des < 0 || res == NULL) {
-    perror("failed to duplicate caml channel"); exit(1);
+    caml_failwith("failed to duplicate caml channel");
   }
   return res ;
 }
@@ -169,9 +169,20 @@ CAMLprim value wrapper_bdd_done() {
   CAMLreturn(Val_unit);
 }
 
+CAMLprim value wrapper_bdd_isrunning() {
+  CAMLparam0();
+  CAMLlocal1(r);
+  r = bdd_isrunning();
+  CAMLreturn(Val_bool(r));
+}
+
 CAMLprim value wrapper_bdd_setvarnum(value num) {
   CAMLparam1(num);
-  bdd_setvarnum(Int_val(num));
+  if (bdd_isrunning()) {
+    bdd_setvarnum(Int_val(num));
+  } else {
+    caml_failwith("Buddy not initialized");
+  };
   CAMLreturn(Val_unit);
 }
 

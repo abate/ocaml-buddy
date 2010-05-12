@@ -129,7 +129,7 @@ external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
     result --- in case they are undefined in [r] --- are defined by the 
     [pol] parameter. If pol is false then the variables will be in negative 
     form, and otherwise they will be in positive form. *)
-val bdd_satoneset : bdd -> var list -> bool -> bdd
+val bdd_satoneset : ?pol:bool -> bdd -> var list -> bdd
 
 (** [bdd_makeset: l] Builds a bdd variable set from an var list. The BDD
     variable set is represented as the conjunction of all the variables 
