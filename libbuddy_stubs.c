@@ -67,7 +67,7 @@ static inline value append( value hd, value tl ) {
 
 static inline int length (value l) {
   CAMLparam1(l);
-  int len;
+  int len = 0;
   while (l != Val_emptylist) { len++ ; l = Field(l, 1); }
   return len;
 }
@@ -124,7 +124,7 @@ void wrapper_deletebddpair(value v)
 /* converts a Caml channel to a C FILE* stream */
 static FILE * stream_of_channel(value chan, const char * mode)
 {
-  int des ;
+  int des;
   FILE * res ;
   struct channel *c_chan = Channel(chan) ;
   if(c_chan==NULL)

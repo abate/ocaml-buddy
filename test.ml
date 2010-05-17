@@ -12,11 +12,16 @@
 open OUnit
 
 let reverse = Hashtbl.create 17 ;;
-let builder (vars,clauses) =
+
+let add_vars =
   List.iter (fun v ->
     let i = Buddy.bdd_newvar () in
     Hashtbl.add reverse v i
-  ) vars ;
+  )
+;;
+
+let builder (vars,clauses) =
+  add_vars vars;
   let bl = 
     List.map (fun l ->
       List.map (function
@@ -48,7 +53,7 @@ let bdd_allsat_test () =
       ) l;
       Printf.printf "\n";
     in
-    Buddy.bdd_fprintset stdout bdd;
+    (* Buddy.bdd_fprintset stdout bdd; *)
     Buddy.bdd_allsat bdd ch;
     assert_equal true true
   in
@@ -62,6 +67,19 @@ let bdd_satoneset_test () =
   let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
   let f bdd =
     let b = Buddy.bdd_satoneset bdd [Hashtbl.find reverse "b"] in
+    (* Buddy.bdd_fprintdot stdout b; *)
+    assert_equal true true
+  in
+  f bdd ;
+  Buddy.bdd_done ()
+;;
+
+let bdd_satone_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
+  let f bdd =
+    let b = Buddy.bdd_satone bdd in
     Buddy.bdd_fprintdot stdout b;
     assert_equal true true
   in
@@ -69,15 +87,38 @@ let bdd_satoneset_test () =
   Buddy.bdd_done ()
 ;;
 
+let bdd_bigand_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let vars = ["a";"b"] in
+  add_vars vars;
+  let v = List.map (fun v -> Buddy.bdd_pos (Hashtbl.find reverse v)) vars in
+  let bdd = Buddy.bdd_bigand v in
+  assert_equal true true;
+  Buddy.bdd_done ()
+;;
+
+let bdd_bigor_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let vars = ["a";"b"] in
+  add_vars vars;
+  let v = List.map (fun v -> Buddy.bdd_pos (Hashtbl.find reverse v)) vars in
+  let bdd = Buddy.bdd_bigor v in
+  assert_equal true true;
+  Buddy.bdd_done ()
+;;
+
 let all =
   "all tests" >::: [ 
-    "bdd_allsat" >:: bdd_allsat_test;
-    "bdd_allsat" >:: bdd_allsat_test; 
-    "bdd_satoneset" >:: bdd_satoneset_test;
-    "bdd_satone" >:: (fun _ -> todo "");
-    "bdd_bigand" >:: (fun _ -> todo "");
-    "bdd_bigor" >:: (fun _ -> todo "");
+    "bdd_bigand" >:: bdd_satone_test;
+    "bdd_bigor" >:: bdd_bigor_test;
     "bdd_makeset" >:: (fun _ -> todo "");
+
+    "bdd_satone" >:: bdd_satone_test;
+    "bdd_satoneset" >:: bdd_satoneset_test;
+    "bdd_allsat" >:: bdd_allsat_test;
+
     "bdd_setvarorder" >:: (fun _ -> todo "");
   ]
 
