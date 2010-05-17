@@ -40,6 +40,8 @@ type reorder_strategy =
   |Random  (** Mostly used for debugging purpose, but may be usefull for others.
                Selects a random position for each variable. *)
 
+external bdd_compare : bdd -> bdd -> int = "wrapper_bdd_compare"
+
 (** Initializes the bdd package. The [nodenum] parameter sets the initial number 
 of BDD nodes and [cachesize] sets the size of the caches used for the BDD 
     operators (not the unique node table). 
@@ -116,7 +118,7 @@ val bdd_bigand : bdd list -> bdd
 (** Finds all satisfying variable assignments. [bdd_allsat r handler] iterates
     through all legal variable assignments (those that make the BDD come true)
     for the bdd [r] and calls the callback handler [handler] for each of them. *)
-external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
+val bdd_allsat : ((var * value) list -> unit) -> bdd -> unit
 
 (** [bdd_satone r] Finds one satisfying variable assignment. Finds a BDD with
     at most one variable at each level. This BDD implies [r] and is not false
@@ -178,7 +180,10 @@ val bdd_reorder : ?strategy : reorder_strategy -> unit -> unit
 (** Enable automatic reordering.  *)
 val bdd_autoreorder : ?strategy : reorder_strategy -> unit -> unit
 
-external bdd_setvarorder : int list -> unit = "wrapper_bdd_setvarorder"
+(** set a specific variable order. if the variable list (x1, ..., xn) is a
+    subset of the bdd variables (y1 ... ym), then the order will be as
+    (x1, ..., xn, 1 ... m) *)
+val bdd_setvarorder : int list -> unit
 
 (** Enables automatic reordering. *)
 external bdd_enable_reorder : unit -> unit = "wrapper_bdd_enable_reorder"
@@ -189,8 +194,8 @@ external bdd_disable_reorder : unit -> unit = "wrapper_bdd_disable_reorder"
 (** Enables verbose information about reorderings. *)
 external bdd_reorder_verbose : int -> int = "wrapper_bdd_reorder_verbose"
 
-(** Prints the current order to stdout. *)
-external bdd_printorder : unit -> unit = "wrapper_bdd_printorder"
+(** Prints the current order to [out_channel] *)
+external bdd_fprintorder : out_channel -> unit = "wrapper_bdd_fprintorder"
 
 (** Fetch the level of a specific bdd variable. *)
 external bdd_level2var : int -> int = "wrapper_bdd_level2var"

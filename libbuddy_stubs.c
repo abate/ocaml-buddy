@@ -66,11 +66,13 @@ static inline value append( value hd, value tl ) {
 }
 
 static inline int length (value l) {
-  CAMLparam1(l);
-  int len;
+  int len = 0;
   while (l != Val_emptylist) { len++ ; l = Field(l, 1); }
   return len;
 }
+
+#define BDD_val(v) (*((BDD*)Data_custom_val(v)))
+#define BDDPAIR_val(v) (*((bddPair**)Data_custom_val(v)))
 
 /* global variables (initialized by wrapper_bdd_init) */
 
@@ -83,48 +85,60 @@ int wrapper_ocamlgc_max = 20000;
 
 /* type bdd: linking buddy reference counters with Ocaml GC */
 
-void wrapper_makebdd(value* vptr, BDD x)
-{
+void _makebdd(value* vptr, BDD x) {
   int used = bdd_nodecount(x);
   bdd_addref(x);
   *vptr = alloc_custom(&bddops, sizeof (BDD), used, wrapper_ocamlgc_max);
-  *((BDD*)Data_custom_val(*vptr)) = x;
+  BDD_val(*vptr) = x;
 }
 
-void wrapper_deletebdd(value v)
-{
-  BDD x = *((BDD*)Data_custom_val(v));
+void _deletebdd(value v) {
+  BDD x = BDD_val(v);
   bdd_delref(x);
 }
 
-int wrapper_comparebdd(value v1, value v2)
-{
-  BDD x,y;
-  CAMLparam2(v1, v2);
-  x = *((BDD*)Data_custom_val(v1));
-  y = *((BDD*)Data_custom_val(v2));
-  CAMLreturn(x < y ? -1  : x == y ? 0 : 1);
+static int _comparebdd(value v1, value v2) {
+  BDD p1 = BDD_val(v1);
+  BDD p2 = BDD_val(v2);
+  if(p1 == p2) return 0;
+  if(p1 < p2) return -1;
+  if(p1 > p2) return 1;
 }
 
-long wrapper_hashbdd(value v)
-{
-  CAMLparam1(v);
-  BDD x = *((BDD*)Data_custom_val(v));
-  CAMLreturn((long)x);
+static long _hashbdd(value v) {
+  return (long) BDD_val(v);
 }
 
 /* type bddpair: the use of custom_val here is not so important */
 
-void wrapper_deletebddpair(value v)
-{
-  bddPair* x = *((bddPair**)Data_custom_val(v));
+void _deletebddpair(value v) {
+  bddPair* x = BDDPAIR_val(v);
   bdd_freepair(x);
 }
 
+CAMLprim void wrapper_bdd_init(value v1, value v2) {
+  int nodesize = Int_val(v1);
+  int cachesize = Int_val(v2);
+  bdd_init(nodesize, cachesize);
+
+  bddops.identifier = NULL;
+  bddops.finalize = _deletebdd;
+  bddops.compare = _comparebdd;
+  bddops.hash = _hashbdd;
+  bddops.serialize = NULL;
+  bddops.deserialize = NULL;
+
+  bddpairops.identifier = NULL;
+  bddpairops.finalize = _deletebddpair;
+  bddpairops.compare = NULL;
+  bddpairops.hash = NULL;
+  bddpairops.serialize = NULL;
+  bddpairops.deserialize = NULL;
+}
+
 /* converts a Caml channel to a C FILE* stream */
-static FILE * stream_of_channel(value chan, const char * mode)
-{
-  int des ;
+static FILE * stream_of_channel(value chan, const char * mode) {
+  int des;
   FILE * res ;
   struct channel *c_chan = Channel(chan) ;
   if(c_chan==NULL)
@@ -139,28 +153,9 @@ static FILE * stream_of_channel(value chan, const char * mode)
 
 /* wrappers */
 
-CAMLprim value wrapper_bdd_init(value nodesize, value cachesize) {
-  CAMLparam2 (nodesize, cachesize);
-  bdd_init(Int_val(nodesize), Int_val(cachesize));
-
-  bddops.identifier = NULL;
-  bddops.finalize = wrapper_deletebdd;
-  bddops.compare = wrapper_comparebdd;
-  bddops.hash = wrapper_hashbdd;
-  bddops.serialize = NULL;
-  bddops.deserialize = NULL;
-
-  bddpairops.identifier = NULL;
-  bddpairops.finalize = wrapper_deletebddpair;
-  bddpairops.compare = NULL;
-  bddpairops.hash = NULL;
-  bddpairops.serialize = NULL;
-  bddpairops.deserialize = NULL;
-
-  /* not gc messages on stdout */
-  bdd_gbc_hook(NULL);
-  
-  CAMLreturn(Val_unit);
+CAMLprim value wrapper_bdd_compare(value v1, value v2) {
+  CAMLparam2(v1,v2);
+  CAMLreturn(Val_int(_comparebdd(v1,v2)));
 }
 
 CAMLprim value wrapper_bdd_done() {
@@ -197,13 +192,13 @@ CAMLprim value wrapper_bdd_newpair() {
   bddPair* shifter;
   r = alloc_custom(&bddpairops, sizeof (bddPair*), 1, 1);
   shifter = bdd_newpair();
-  *((bddPair**)Data_custom_val(r)) = shifter;
+  BDDPAIR_val(r) = shifter;
   CAMLreturn(r);
 }
 
 CAMLprim value wrapper_bdd_fprinttable(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   bdd_fprinttable(f, x);
   fflush(f);
@@ -212,7 +207,7 @@ CAMLprim value wrapper_bdd_fprinttable(value out, value bdd) {
 
 CAMLprim value wrapper_bdd_fprintset(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   bdd_fprintset(f, x);
   fflush(f);
@@ -221,16 +216,24 @@ CAMLprim value wrapper_bdd_fprintset(value out, value bdd) {
 
 CAMLprim value wrapper_bdd_fprintdot(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   bdd_fprintdot(f, x);
   fflush(f);
   CAMLreturn(Val_unit);
 }
 
+CAMLprim value wrapper_bdd_fprintorder(value out) {
+  CAMLparam1(out);
+  FILE* f = stream_of_channel(out,"w");
+  bdd_fprintorder(f);
+  fflush(f);
+  CAMLreturn(Val_unit);
+}
+
 CAMLprim value wrapper_bdd_save(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   if (bdd_save(f, x) != 0) {
     caml_raise_constant(*caml_named_value("buddy_exn_IOError"));
@@ -246,42 +249,46 @@ CAMLprim value wrapper_bdd_load(value in) {
   if (bdd_load(stream_of_channel(in,"r"), &x) != 0) {
     caml_raise_constant(*caml_named_value("buddy_exn_IOError"));
   }
-  wrapper_makebdd(&r, x);
+  _makebdd(&r, x);
   CAMLreturn(r);
 }
 
 CAMLprim value wrapper_bdd_setvarorder(value neworder) {
   CAMLparam1(neworder);
-  int h, i, n[bdd_varnum()];
-  for (i = bdd_varnum() - 1; i >= 0; i--) { n[i] = 0; }
-  i = 0;
-  while (neworder != Val_emptylist) {
-    h = Int_val(Field(neworder, 0));
-    neworder = Field(neworder, 1);
-    n[i]=h;
-    i=i+1;
+  int h, i;
+  int n[bdd_varnum()];
+  int len = length(neworder);
+  if (len != bdd_varnum()) {
+    caml_raise_constant(*caml_named_value("buddy_exn_InvalidOrder"));
+  } else {
+    for (i = bdd_varnum() - 1; i >= 0; i--) { n[i] = 0; }
+    i = 0;
+    while (neworder != Val_emptylist) {
+      h = Int_val(Field(neworder, 0));
+      neworder = Field(neworder, 1);
+      n[i++]=h;
+//      i=i+1;
+    }
+    bdd_setvarorder(n);
   }
-  bdd_setvarorder(n);
   CAMLreturn(Val_unit);
 }
 
 CAMLprim value wrapper_bdd_bigapply(value clause, value op) {
   CAMLparam2(clause,op);
   CAMLlocal1(r);
-  BDD e,x;
+  BDD x;
   if (clause == Val_emptylist) {
     caml_raise_constant(*caml_named_value("buddy_exn_EmptyList"));
   } else {
-    BDD bdd = *((BDD*)Data_custom_val((Field(clause, 0))));
+    BDD bdd = BDD_val(Field(clause, 0));
     clause = Field(clause, 1);
     while (clause != Val_emptylist) {
-      x = *((BDD*)Data_custom_val((Field(clause, 0))));
-      e = bdd_apply(x,bdd,Int_val(op));
-      bdd_addref(e);
-      bdd = e;
+      x = BDD_val(Field(clause, 0));
+      bdd = bdd_addref(bdd_apply(x,bdd,Int_val(op)));
       clause = Field(clause, 1);
     }
-    wrapper_makebdd(&r, bdd);
+    _makebdd(&r, bdd);
   }
   CAMLreturn(r);
 }
@@ -290,27 +297,33 @@ CAMLprim value wrapper_bdd_makeset(value varlist) {
   CAMLparam1(varlist);
   CAMLlocal1(r);
   BDD bdd;
-  int varnum = length(varlist);
-  int varset[varnum];
-  int i = 0;
-  while (varlist != Val_emptylist) {
-    varset[i++] = Int_val(Field(varlist, 0));
-    varlist = Field(varlist, 1);
+  if (varlist == Val_emptylist) {
+    caml_raise_constant(*caml_named_value("buddy_exn_EmptyList"));
+  } else {
+    int varnum = length(varlist);
+    int varset[varnum];
+    int i = 0;
+    while (varlist != Val_emptylist) {
+      varset[i++] = Int_val(Field(varlist, 0));
+      varlist = Field(varlist, 1);
+    }
+    bdd = bdd_makeset (varset, varnum);
+    _makebdd(&r, bdd);
   }
-  bdd = bdd_makeset (varset, varnum);
-  wrapper_makebdd(&r, bdd);
   CAMLreturn(r);
 }
 
-CAMLprim value wrapper_bdd_allsat(value r, value f) {
-  CAMLparam2(r,f);
-  BDD bdd = *((BDD*)Data_custom_val(r));
+CAMLprim value wrapper_bdd_allsat(value r) {
+  CAMLparam1(r);
+  BDD bdd = BDD_val(r);
+  value* f = caml_named_value("__allsat_handler");
   void handler(char* varset, int size) {
     CAMLlocal2(tl,v);
-    int i;
+    int i = 0;
     tl = Val_emptylist;
+    //printf("size : %d\n", size);
     for (i = 0 ; i < size; i++) {
-      // printf("%d : %d\n", i, varset[i]);
+      //printf("%d : %d\n", i, varset[i]);
       // variants in ocaml range from 0 to n-1 !!!
       switch (varset[i]) {
         case  0 : v = Val_int(0); break; // False
@@ -322,8 +335,8 @@ CAMLprim value wrapper_bdd_allsat(value r, value f) {
         tl = append(tuple(Val_int(i),v),tl);
       }
     }
-    callback(f,tl);
-    return;
+    caml_callback(*f,tl);
+    CAMLreturn0;
   }
   bdd_allsat(bdd,*handler);
   CAMLreturn(Val_unit);
@@ -352,17 +365,17 @@ CAMLprim value wrapper_bdd_createset(value f) {
           d = e;
         }
     }
-  wrapper_makebdd(&r, d);
+  _makebdd(&r, d);
   CAMLreturn(r);
 }
 
 /* macro definitions */
 
 #define FUN_ARG_bdd(x, v) \
-  BDD x = *((BDD*)Data_custom_val(v));
+  BDD x = BDD_val(v);
 
 #define FUN_ARG_bddpair(x, v) \
-  bddPair* x = *((bddPair**)Data_custom_val(v));
+  bddPair* x = BDDPAIR_val(v);
 
 #define FUN_ARG_int(x, v) \
   int x = Int_val(v);
@@ -376,7 +389,7 @@ CAMLprim value wrapper_bdd_createset(value f) {
 
 #define FUN_RET_bdd(eval) \
   CAMLlocal1(r); /* &r is GC-root */ \
-  wrapper_makebdd(&r, eval); \
+  _makebdd(&r, eval); \
   CAMLreturn(r);
 
 #define FUN0(name, ret_type) \
@@ -479,7 +492,6 @@ FUN1(bdd_autoreorder, int, int)
 FUN00(bdd_enable_reorder, unit)
 FUN00(bdd_disable_reorder, unit)
 FUN1(bdd_reorder_verbose, int, int)
-FUN00(bdd_printorder, unit)
 FUN1(bdd_level2var, int, int)
 FUN1(bdd_var2level, int, int)
 

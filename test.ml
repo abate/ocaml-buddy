@@ -12,11 +12,16 @@
 open OUnit
 
 let reverse = Hashtbl.create 17 ;;
-let builder (vars,clauses) =
+
+let add_vars =
   List.iter (fun v ->
     let i = Buddy.bdd_newvar () in
     Hashtbl.add reverse v i
-  ) vars ;
+  )
+;;
+
+let builder (vars,clauses) =
+  add_vars vars;
   let bl = 
     List.map (fun l ->
       List.map (function
@@ -43,13 +48,14 @@ let bdd_allsat_test () =
   let f bdd =
     let ch l =
       tt_test :=  (List.sort compare l) :: !tt_test ;
-      List.iter (fun (var,value) ->
+(*      List.iter (fun (var,value) ->
         Printf.printf "%d = %s\n" var (Buddy.string_of_value(value))
       ) l;
       Printf.printf "\n";
+      *)
     in
-    Buddy.bdd_fprintset stdout bdd;
-    Buddy.bdd_allsat bdd ch;
+    (* Buddy.bdd_fprintset stdout bdd; *)
+    Buddy.bdd_allsat ch bdd;
     assert_equal true true
   in
   f bdd;
@@ -62,23 +68,84 @@ let bdd_satoneset_test () =
   let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
   let f bdd =
     let b = Buddy.bdd_satoneset bdd [Hashtbl.find reverse "b"] in
-    Buddy.bdd_fprintdot stdout b;
+    (* Buddy.bdd_fprintdot stdout b; *)
     assert_equal true true
   in
   f bdd ;
   Buddy.bdd_done ()
 ;;
 
+let bdd_satone_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
+  Buddy.bdd_fprintdot stdout (Buddy.bdd_restrict bdd (Buddy.bdd_pos (Hashtbl.find reverse "b")));
+  Buddy.bdd_fprintdot stdout (Buddy.bdd_low bdd);
+  Buddy.bdd_fprintdot stdout (Buddy.bdd_high bdd);
+  let f bdd =
+    let b = Buddy.bdd_satone bdd in
+    (* Buddy.bdd_fprintdot stdout b; *)
+    assert_equal true true
+  in
+  f bdd ;
+  Buddy.bdd_done ()
+;;
+
+let bdd_bigand_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let vars = ["a";"b"] in
+  add_vars vars;
+  let v = List.map (fun v -> Buddy.bdd_pos (Hashtbl.find reverse v)) vars in
+  let bdd = Buddy.bdd_bigand v in
+  assert_equal true true;
+  Buddy.bdd_done ()
+;;
+
+let bdd_bigor_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let vars = ["a";"b"] in
+  add_vars vars;
+  let v = List.map (fun v -> Buddy.bdd_pos (Hashtbl.find reverse v)) vars in
+  let bdd = Buddy.bdd_bigor v in
+  assert_equal true true;
+  Buddy.bdd_done ()
+;;
+
+let bdd_setvarorder_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let vars = ["a";"b"] in
+  let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
+  (* add_vars vars; *)
+  let v = List.map (Hashtbl.find reverse) vars in
+(*  print_endline "-----------1";
+  Buddy.bdd_fprintorder stdout ;
+  Buddy.bdd_fprintdot stdout bdd;
+  print_endline "-----------2";
+  ignore(Buddy.bdd_satone bdd);
+  Buddy.bdd_setvarorder (List.rev v);
+  print_endline "-----------3";
+  Buddy.bdd_fprintorder stdout ;
+  Buddy.bdd_fprintdot stdout bdd;
+  print_endline "-----------4";
+*)
+  assert_equal true true;
+  Buddy.bdd_done ()
+;;
+
 let all =
   "all tests" >::: [ 
-    "bdd_allsat" >:: bdd_allsat_test;
-    "bdd_allsat" >:: bdd_allsat_test; 
-    "bdd_satoneset" >:: bdd_satoneset_test;
-    "bdd_satone" >:: (fun _ -> todo "");
-    "bdd_bigand" >:: (fun _ -> todo "");
-    "bdd_bigor" >:: (fun _ -> todo "");
+    "bdd_bigand" >:: bdd_satone_test;
+    "bdd_bigor" >:: bdd_bigor_test;
     "bdd_makeset" >:: (fun _ -> todo "");
-    "bdd_setvarorder" >:: (fun _ -> todo "");
+
+    "bdd_satone" >:: bdd_satone_test;
+    "bdd_satoneset" >:: bdd_satoneset_test;
+    "bdd_allsat" >:: bdd_allsat_test;
+
+    "bdd_setvarorder" >:: bdd_setvarorder_test;
   ]
 
 let main () =
