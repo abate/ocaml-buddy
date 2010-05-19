@@ -48,13 +48,14 @@ let bdd_allsat_test () =
   let f bdd =
     let ch l =
       tt_test :=  (List.sort compare l) :: !tt_test ;
-      List.iter (fun (var,value) ->
+(*      List.iter (fun (var,value) ->
         Printf.printf "%d = %s\n" var (Buddy.string_of_value(value))
       ) l;
       Printf.printf "\n";
+      *)
     in
     (* Buddy.bdd_fprintset stdout bdd; *)
-    Buddy.bdd_allsat bdd ch;
+    Buddy.bdd_allsat ch bdd;
     assert_equal true true
   in
   f bdd;
@@ -78,9 +79,12 @@ let bdd_satone_test () =
   Buddy.bdd_init ();
   Hashtbl.clear reverse ;
   let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
+  Buddy.bdd_fprintdot stdout (Buddy.bdd_restrict bdd (Buddy.bdd_pos (Hashtbl.find reverse "b")));
+  Buddy.bdd_fprintdot stdout (Buddy.bdd_low bdd);
+  Buddy.bdd_fprintdot stdout (Buddy.bdd_high bdd);
   let f bdd =
     let b = Buddy.bdd_satone bdd in
-    Buddy.bdd_fprintdot stdout b;
+    (* Buddy.bdd_fprintdot stdout b; *)
     assert_equal true true
   in
   f bdd ;
@@ -109,6 +113,28 @@ let bdd_bigor_test () =
   Buddy.bdd_done ()
 ;;
 
+let bdd_setvarorder_test () =
+  Buddy.bdd_init ();
+  Hashtbl.clear reverse ;
+  let vars = ["a";"b"] in
+  let bdd = builder (["a";"b"],[[("a",true)];[("b",true)]]) in
+  (* add_vars vars; *)
+  let v = List.map (Hashtbl.find reverse) vars in
+(*  print_endline "-----------1";
+  Buddy.bdd_fprintorder stdout ;
+  Buddy.bdd_fprintdot stdout bdd;
+  print_endline "-----------2";
+  ignore(Buddy.bdd_satone bdd);
+  Buddy.bdd_setvarorder (List.rev v);
+  print_endline "-----------3";
+  Buddy.bdd_fprintorder stdout ;
+  Buddy.bdd_fprintdot stdout bdd;
+  print_endline "-----------4";
+*)
+  assert_equal true true;
+  Buddy.bdd_done ()
+;;
+
 let all =
   "all tests" >::: [ 
     "bdd_bigand" >:: bdd_satone_test;
@@ -119,7 +145,7 @@ let all =
     "bdd_satoneset" >:: bdd_satoneset_test;
     "bdd_allsat" >:: bdd_allsat_test;
 
-    "bdd_setvarorder" >:: (fun _ -> todo "");
+    "bdd_setvarorder" >:: bdd_setvarorder_test;
   ]
 
 let main () =

@@ -228,6 +228,15 @@ CAMLprim value wrapper_bdd_fprintdot(value out, value bdd) {
   CAMLreturn(Val_unit);
 }
 
+CAMLprim value wrapper_bdd_fprintorder(value out) {
+  CAMLparam1(out);
+  FILE* f = stream_of_channel(out,"w");
+  bdd_fprintorder(f);
+  bdd_printorder();
+  fflush(f);
+  CAMLreturn(Val_unit);
+}
+
 CAMLprim value wrapper_bdd_save(value out, value bdd) {
   CAMLparam2(out, bdd);
   BDD x = *((BDD*)Data_custom_val(bdd));
@@ -252,16 +261,22 @@ CAMLprim value wrapper_bdd_load(value in) {
 
 CAMLprim value wrapper_bdd_setvarorder(value neworder) {
   CAMLparam1(neworder);
-  int h, i, n[bdd_varnum()];
-  for (i = bdd_varnum() - 1; i >= 0; i--) { n[i] = 0; }
-  i = 0;
-  while (neworder != Val_emptylist) {
-    h = Int_val(Field(neworder, 0));
-    neworder = Field(neworder, 1);
-    n[i]=h;
-    i=i+1;
+  int h, i;
+  int n[bdd_varnum()];
+  int len = length(neworder);
+  if (len != bdd_varnum()) {
+    caml_raise_constant(*caml_named_value("buddy_exn_InvalidOrder"));
+  } else {
+    for (i = bdd_varnum() - 1; i >= 0; i--) { n[i] = 0; }
+    i = 0;
+    while (neworder != Val_emptylist) {
+      h = Int_val(Field(neworder, 0));
+      neworder = Field(neworder, 1);
+      n[i]=h;
+      i=i+1;
+    }
+    bdd_setvarorder(n);
   }
-  bdd_setvarorder(n);
   CAMLreturn(Val_unit);
 }
 
@@ -302,15 +317,17 @@ CAMLprim value wrapper_bdd_makeset(value varlist) {
   CAMLreturn(r);
 }
 
-CAMLprim value wrapper_bdd_allsat(value r, value f) {
-  CAMLparam2(r,f);
+CAMLprim value wrapper_bdd_allsat(value r) {
+  CAMLparam1(r);
   BDD bdd = *((BDD*)Data_custom_val(r));
+  value* f = caml_named_value("__allsat_handler");
   void handler(char* varset, int size) {
     CAMLlocal2(tl,v);
-    int i;
+    int i = 0;
     tl = Val_emptylist;
+    //printf("size : %d\n", size);
     for (i = 0 ; i < size; i++) {
-      // printf("%d : %d\n", i, varset[i]);
+      //printf("%d : %d\n", i, varset[i]);
       // variants in ocaml range from 0 to n-1 !!!
       switch (varset[i]) {
         case  0 : v = Val_int(0); break; // False
@@ -322,7 +339,7 @@ CAMLprim value wrapper_bdd_allsat(value r, value f) {
         tl = append(tuple(Val_int(i),v),tl);
       }
     }
-    callback(f,tl);
+    caml_callback(*f,tl);
     return;
   }
   bdd_allsat(bdd,*handler);
@@ -479,7 +496,6 @@ FUN1(bdd_autoreorder, int, int)
 FUN00(bdd_enable_reorder, unit)
 FUN00(bdd_disable_reorder, unit)
 FUN1(bdd_reorder_verbose, int, int)
-FUN00(bdd_printorder, unit)
 FUN1(bdd_level2var, int, int)
 FUN1(bdd_var2level, int, int)
 

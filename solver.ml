@@ -98,10 +98,10 @@ let solve file =
   let (vars,bdd) = process_file file in
   (* Buddy.bdd_varblockall (); *)
   (* XXX setvarorder is broken !!! *)
-  (* let _b = Buddy.bdd_makeset [0;1;2] in 
-  Buddy.bdd_fprintdot stdout _b ; *)
+  (* let _b = Buddy.bdd_makeset [0;1;2] in  *)
+  Buddy.bdd_fprintdot stdout bdd ;
 
-  (* Buddy.bdd_setvarorder [5;4;2]; *)
+  Buddy.bdd_setvarorder [0;1];
   Buddy.bdd_reorder ();
   let revs =
     let acc = Hashtbl.create (Hashtbl.length vars) in
@@ -117,7 +117,7 @@ let solve file =
     ;
     Printf.printf "\n";
   in
-  Buddy.bdd_allsat bdd f ;
+  Buddy.bdd_allsat f bdd ;
   Printf.printf "Try to save it\n%!";
   let ch = open_out ("out.bdd") in
   Buddy.bdd_save ch bdd;

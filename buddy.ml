@@ -82,7 +82,8 @@ external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex"
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
 external bdd_satoneset : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_satone"
 
-external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat"
+external bdd_allsat : bdd -> unit = "wrapper_bdd_allsat"
+(* external bdd_allsat : bdd -> ((var * value) list -> unit) -> unit = "wrapper_bdd_allsat" *)
 external bdd_satcount : bdd -> int = "wrapper_bdd_satcount"
 external bdd_satcountln : bdd -> float = "wrapper_bdd_satcountln"
 external bdd_makeset : var list -> bdd = "wrapper_bdd_makeset"
@@ -107,7 +108,6 @@ external bdd_autoreorder : int -> int = "wrapper_bdd_autoreorder"
 external bdd_enable_reorder : unit -> unit = "wrapper_bdd_enable_reorder"
 external bdd_disable_reorder : unit -> unit = "wrapper_bdd_disable_reorder"
 external bdd_reorder_verbose : int -> int = "wrapper_bdd_reorder_verbose"
-external bdd_printorder : unit -> unit = "wrapper_bdd_printorder"
 external bdd_level2var : int -> int = "wrapper_bdd_level2var"
 external bdd_var2level : int -> int = "wrapper_bdd_var2level"
 
@@ -115,6 +115,7 @@ external bdd_setmaxincrease : int -> int = "wrapper_bdd_setmaxincrease"
 external bdd_setcacheratio : int -> int = "wrapper_bdd_setcacheratio"
 external bdd_isrunning : unit -> bool = "wrapper_bdd_isrunning"
 
+external bdd_fprintorder : out_channel -> unit = "wrapper_bdd_fprintorder"
 external bdd_fprinttable : out_channel -> bdd -> unit = "wrapper_bdd_fprinttable"
 external bdd_fprintdot : out_channel -> bdd -> unit = "wrapper_bdd_fprintdot"
 external bdd_fprintset : out_channel -> bdd -> unit = "wrapper_bdd_fprintset"
@@ -169,6 +170,18 @@ let bdd_reorder ?(strategy=Win2ite) () =
   let str = int_of_strategy(strategy) in
   ignore(bdd_reorder str)
 
+let bdd_setvarorder l =
+  if List.length l = bdd_varnum() then
+    bdd_setvarorder l
+  else
+    let nl = ref (List.rev l) in
+    for i = 0 to bdd_varnum() - 1 do
+      if List.mem i l then ()
+      else nl := i::!nl
+    done;
+    bdd_setvarorder (List.rev !nl)
+;;
+
 let value_of_var = function
   |  0 -> False
   |  1 -> True
@@ -195,6 +208,11 @@ let bdd_relprod q =
 let bdd_satoneset ?(pol=true) bdd vars =
   let p = if pol then bdd_true else bdd_false in
   bdd_satoneset bdd (bdd_makeset vars) p
+;;
+
+let bdd_allsat f bdd =
+  Callback.register "__allsat_handler" f;
+  bdd_allsat bdd
 ;;
 
 exception EmptyBdd
