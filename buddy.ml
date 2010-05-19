@@ -51,6 +51,7 @@ let _BDD_REORDER_FIXED = 1
 
 (* external functions *)
 
+external bdd_compare : bdd -> bdd -> int = "wrapper_bdd_compare"
 external bdd_init : int -> int -> unit = "wrapper_bdd_init"
 external bdd_done : unit -> unit = "wrapper_bdd_done"
 

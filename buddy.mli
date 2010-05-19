@@ -40,6 +40,8 @@ type reorder_strategy =
   |Random  (** Mostly used for debugging purpose, but may be usefull for others.
                Selects a random position for each variable. *)
 
+external bdd_compare : bdd -> bdd -> int = "wrapper_bdd_compare"
+
 (** Initializes the bdd package. The [nodenum] parameter sets the initial number 
 of BDD nodes and [cachesize] sets the size of the caches used for the BDD 
     operators (not the unique node table). 
