@@ -71,6 +71,9 @@ static inline int length (value l) {
   return len;
 }
 
+#define BDD_val(v) (*((BDD*)Data_custom_val(v)))
+#define BDDPAIR_val(v) (*((bddPair**)Data_custom_val(v)))
+
 /* global variables (initialized by wrapper_bdd_init) */
 
 struct custom_operations bddops; /* custom GC-enabled type */
@@ -86,30 +89,30 @@ void _makebdd(value* vptr, BDD x) {
   int used = bdd_nodecount(x);
   bdd_addref(x);
   *vptr = alloc_custom(&bddops, sizeof (BDD), used, wrapper_ocamlgc_max);
-  *((BDD*)Data_custom_val(*vptr)) = x;
+  BDD_val(*vptr) = x;
 }
 
 void _deletebdd(value v) {
-  BDD x = *((BDD*)Data_custom_val(v));
+  BDD x = BDD_val(v);
   bdd_delref(x);
 }
 
-int _comparebdd(value v1, value v2) {
-  BDD x,y;
-  x = *((BDD*)Data_custom_val(v1));
-  y = *((BDD*)Data_custom_val(v2));
-  return(x < y ? -1  : x == y ? 0 : 1);
+static int _comparebdd(value v1, value v2) {
+  BDD p1 = BDD_val(v1);
+  BDD p2 = BDD_val(v2);
+  if(p1 == p2) return 0;
+  if(p1 < p2) return -1;
+  if(p1 > p2) return 1;
 }
 
-long _hashbdd(value v) {
-  BDD x = *((BDD*)Data_custom_val(v));
-  return((long)x);
+static long _hashbdd(value v) {
+  return (long) BDD_val(v);
 }
 
 /* type bddpair: the use of custom_val here is not so important */
 
 void _deletebddpair(value v) {
-  bddPair* x = *((bddPair**)Data_custom_val(v));
+  bddPair* x = BDDPAIR_val(v);
   bdd_freepair(x);
 }
 
@@ -189,13 +192,13 @@ CAMLprim value wrapper_bdd_newpair() {
   bddPair* shifter;
   r = alloc_custom(&bddpairops, sizeof (bddPair*), 1, 1);
   shifter = bdd_newpair();
-  *((bddPair**)Data_custom_val(r)) = shifter;
+  BDDPAIR_val(r) = shifter;
   CAMLreturn(r);
 }
 
 CAMLprim value wrapper_bdd_fprinttable(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   bdd_fprinttable(f, x);
   fflush(f);
@@ -204,7 +207,7 @@ CAMLprim value wrapper_bdd_fprinttable(value out, value bdd) {
 
 CAMLprim value wrapper_bdd_fprintset(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   bdd_fprintset(f, x);
   fflush(f);
@@ -213,7 +216,7 @@ CAMLprim value wrapper_bdd_fprintset(value out, value bdd) {
 
 CAMLprim value wrapper_bdd_fprintdot(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   bdd_fprintdot(f, x);
   fflush(f);
@@ -230,7 +233,7 @@ CAMLprim value wrapper_bdd_fprintorder(value out) {
 
 CAMLprim value wrapper_bdd_save(value out, value bdd) {
   CAMLparam2(out, bdd);
-  BDD x = *((BDD*)Data_custom_val(bdd));
+  BDD x = BDD_val(bdd);
   FILE* f = stream_of_channel(out,"w");
   if (bdd_save(f, x) != 0) {
     caml_raise_constant(*caml_named_value("buddy_exn_IOError"));
@@ -278,10 +281,10 @@ CAMLprim value wrapper_bdd_bigapply(value clause, value op) {
   if (clause == Val_emptylist) {
     caml_raise_constant(*caml_named_value("buddy_exn_EmptyList"));
   } else {
-    BDD bdd = *((BDD*)Data_custom_val((Field(clause, 0))));
+    BDD bdd = BDD_val(Field(clause, 0));
     clause = Field(clause, 1);
     while (clause != Val_emptylist) {
-      x = *((BDD*)Data_custom_val((Field(clause, 0))));
+      x = BDD_val(Field(clause, 0));
       bdd = bdd_addref(bdd_apply(x,bdd,Int_val(op)));
       clause = Field(clause, 1);
     }
@@ -312,7 +315,7 @@ CAMLprim value wrapper_bdd_makeset(value varlist) {
 
 CAMLprim value wrapper_bdd_allsat(value r) {
   CAMLparam1(r);
-  BDD bdd = *((BDD*)Data_custom_val(r));
+  BDD bdd = BDD_val(r);
   value* f = caml_named_value("__allsat_handler");
   void handler(char* varset, int size) {
     CAMLlocal2(tl,v);
@@ -333,7 +336,7 @@ CAMLprim value wrapper_bdd_allsat(value r) {
       }
     }
     caml_callback(*f,tl);
-    return;
+    CAMLreturn0;
   }
   bdd_allsat(bdd,*handler);
   CAMLreturn(Val_unit);
@@ -369,10 +372,10 @@ CAMLprim value wrapper_bdd_createset(value f) {
 /* macro definitions */
 
 #define FUN_ARG_bdd(x, v) \
-  BDD x = *((BDD*)Data_custom_val(v));
+  BDD x = BDD_val(v);
 
 #define FUN_ARG_bddpair(x, v) \
-  bddPair* x = *((bddPair**)Data_custom_val(v));
+  bddPair* x = BDDPAIR_val(v);
 
 #define FUN_ARG_int(x, v) \
   int x = Int_val(v);
