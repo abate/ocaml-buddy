@@ -150,6 +150,7 @@ let bdd_init ?(nodenum=1000) ?(cachesize=100) () =
 
 let bdd_done () =
   varcount := 0;
+  Gc.full_major ();
   bdd_done ()
 ;;
 

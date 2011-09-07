@@ -93,10 +93,8 @@ void _makebdd(value* vptr, BDD x) {
 }
 
 void _deletebdd(value v) {
-  if (bdd_isrunning()){
-    bddPair* x = BDDPAIR_val(v);
-    bdd_freepair(x);
-  }
+  BDD x = BDD_val(v);
+  bdd_delref(x);
 }
 
 static int _comparebdd(value v1, value v2) {
