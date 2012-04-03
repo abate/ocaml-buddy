@@ -3,15 +3,15 @@ NAME = buddy
 VERSION = 0.1
 
 LIBS = _build/$(NAME).cma
-LIBS_OPT = _build/$(NAME).cmxa
-PROGS = _build/solver.byte
-PROGS_OPT = _build/solver.native
-RESULTS = $(LIBS) $(PROGS)
-RESULTS_OPT = $(LIBS_OPT) $(PROGS_OPT)
+LIBS_OPT = _build/$(NAME).cmxa _build/$(NAME).cmxs
+#PROGS = _build/solver.byte
+#PROGS_OPT = _build/solver.native
+RESULTS = $(LIBS) #$(PROGS)
+RESULTS_OPT = $(LIBS_OPT) #$(PROGS_OPT)
 SOURCES = $(wildcard *.ml *.mli) *.c
 
 OCAMLBUILD = ocamlbuild
-OBFLAGS = -classic-display
+OBFLAGS = -classic-display -use-ocamlfind
 OCAMLFIND = ocamlfind
 
 DESTDIR =

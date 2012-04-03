@@ -1,3 +1,4 @@
-<solver.native> or <solver.byte>: c_use_bdd
-<test.*>: c_use_bdd, pkg_oUnit
-<libbuddy_stubs.c>: gcc
+<buddy.cm{x,}a>: use_bdd
+<buddy.cmxs>: link_bdd
+<test.*>: package(oUnit), use_bdd
+<solver.*>: use_bdd

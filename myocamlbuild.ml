@@ -1,6 +1,5 @@
 (**************************************************************************)
-(*  Copyright (C) 2008 Akihiko Tozawa and Masami Hagiya.                  *)
-(*  Copyright (C) 2009 2010 Pietro Abate <pietro.abate@pps.jussieu.fr     *)
+(*  Copyright (C) 2009-12   Pietro Abate <pietro.abate@pps.jussieu.fr     *)
 (*                                                                        *)
 (*  This library is free software: you can redistribute it and/or modify  *)
 (*  it under the terms of the GNU Lesser General Public License as        *)
@@ -12,92 +11,33 @@
 
 open Ocamlbuild_plugin
 
-(* these functions are not really officially exported *)
-let run_and_read = Ocamlbuild_pack.My_unix.run_and_read
-let blank_sep_strings = Ocamlbuild_pack.Lexers.blank_sep_strings
-
-(* this lists all supported packages *)
-let find_packages () =
-  blank_sep_strings &
-    Lexing.from_string &
-      run_and_read "ocamlfind list | cut -d' ' -f1"
-
-(* this is supposed to list available syntaxes, but I don't know how to do it. *)
-let find_syntaxes () = ["camlp4o"; "camlp4r"]
-
-(* ocamlfind command *)
-let ocamlfind x = S[A"ocamlfind"; x]
-
 let _ = dispatch begin function
-   | Before_options ->
-       (* by using Before_options one let command line options have an higher priority *)
-       (* on the contrary using After_options will guarantee to have the higher priority *)
-
-       (* override default commands by ocamlfind ones *)
-       Options.ocamlc     := ocamlfind & A"ocamlc";
-       Options.ocamlopt   := ocamlfind & A"ocamlopt";
-       Options.ocamldep   := ocamlfind & A"ocamldep";
-       Options.ocamldoc   := ocamlfind & A"ocamldoc";
-       Options.ocamlmktop := ocamlfind & A"ocamlmktop"
-
    | After_rules ->
+       (* ocaml compile flags *)
+       flag ["ocaml"; "compile"] & S[A"-ccopt"; A"-O9"];
 
-       (* When one link an OCaml library/binary/package, one should use -linkpkg *)
-       flag ["ocaml"; "link"] & A"-linkpkg";
-       flag ["c"; "compile"; "gcc"] (S[A"-cc"; A"gcc"; A"-ccopt"; A"-fPIC"]);
-       flag ["cc"; "compile"; "g++"] (S[A"-cc"; A"g++"; A"-ccopt"; A"-fPIC"]);
-       (* flag ["ocamlmklib"] (S[A"-lminisat"; A"-oc"; A"minisat_stubs" ]); *)
+       (* C compile flags *)
+       flag ["c"; "compile"] & S[A"-cc"; A"gcc"; A"-ccopt"; A"-fPIC"];
 
-       (* For each ocamlfind package one inject the -package option when
-        * compiling, computing dependencies, generating documentation and
-        * linking. *)
-       List.iter begin fun pkg ->
-         flag ["ocaml"; "compile";  "pkg_"^pkg] & S[A"-package"; A pkg];
-         flag ["ocaml"; "ocamldep"; "pkg_"^pkg] & S[A"-package"; A pkg];
-         flag ["ocaml"; "doc";      "pkg_"^pkg] & S[A"-package"; A pkg];
-         flag ["ocaml"; "link";     "pkg_"^pkg] & S[A"-package"; A pkg];
-       end (find_packages ());
+       flag ["c"; "ocamlmklib"] & S[A"-lbdd";];
 
-       (* Like -package but for extensions syntax. Morover -syntax is useless
-        * when linking. *)
-       List.iter begin fun syntax ->
-         flag ["ocaml"; "compile";  "syntax_"^syntax] & S[A"-syntax"; A syntax];
-         flag ["ocaml"; "ocamldep"; "syntax_"^syntax] & S[A"-syntax"; A syntax];
-         flag ["ocaml"; "doc";      "syntax_"^syntax] & S[A"-syntax"; A syntax];
-       end (find_syntaxes ());
+       dep ["link"; "ocaml"; "use_bdd"] ["libbuddy_stubs.a"];
 
-       flag ["ocaml"; "link"; "c_use_bdd"; "byte"]
-       (S[A"-custom"; A"-ccopt"; A("-Lbdd"); A"-cclib"; A("-lbdd")]);
+       (* this is used to link cmxs files *)
+       flag ["link"; "ocaml"; "link_bdd"] (A"libbuddy_stubs.a");
 
-       flag ["ocaml"; "link"; "c_use_bdd"; "native"]
-       (S[A"-ccopt"; A("-Lbdd"); A"-cclib"; A("-lbdd")]);
+       (*
+       flag ["ocaml"; "use_bdd"; "link"; "library"; "byte"] & S[A"-ccopt"; A"-L."];
+       *)
+       flag ["ocaml"; "use_bdd"; "link"; "library"; "byte"] & S[A"-dllib"; A"-lbuddy_stubs" ];
 
-       flag [ "byte"; "library"; "link" ]
-       (S[A"-dllib"; A("-lbdd"); A"-cclib"; A("-lbuddystubs")]);
+       flag ["ocaml"; "use_bdd"; "link"; "library"; "native"] & S[A"-cclib"; A"-lbdd";];
+       flag ["ocaml"; "use_bdd"; "link"; "library"; "native"] & S[A"-cclib"; A"-lbuddy_stubs"; ];
 
-       flag [ "native"; "library"; "link" ]
-       (S[A"-cclib"; A("-lbdd"); A"-cclib"; A("-lbuddy_stubs")]);
+       flag ["ocaml"; "use_bdd"; "link"; "program"; "native"] & S[A"-ccopt"; A"-L."; A"buddy.cmxa"];
+       flag ["ocaml"; "use_bdd"; "link"; "program"; "byte"] & S[A"-ccopt"; A"-L."; A"buddy.cma"];
 
-       dep  ["ocaml"; "compile"; "c_use_bdd"] ["libbuddy_stubs.a"];
-       dep  ["ocaml"; "link"; "c_use_bdd"] ["libbuddy_stubs.a"];
-
-       (* The default "thread" tag is not compatible with ocamlfind.
-          Indeed, the default rules add the "threads.cma" or "threads.cmxa"
-          options when using this tag. When using the "-linkpkg" option with
-          ocamlfind, this module will then be added twice on the command line.
-       
-          To solve this, one approach is to add the "-thread" option when using
-          the "threads" package using the previous plugin.
-        *)
        flag ["ocaml"; "pkg_threads"; "compile"] (S[A "-thread"]);
        flag ["ocaml"; "pkg_threads"; "link"] (S[A "-thread"]);
-       
-       (** Rule for native dynlinkable plugins *)
-       rule ".cmxa.cmxs" ~prod:"%.cmxs" ~dep:"%.cmxa"
-       (fun env _ ->
-         let cmxs = Px (env "%.cmxs") and cmxa = P (env "%.cmxa") in
-         Cmd (S [!Options.ocamlopt ; A"-linkall" ; A"-shared" ; A"-o" ; cmxs ; cmxa])
-       );
-
    | _ -> ()
 end
