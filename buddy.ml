@@ -77,8 +77,12 @@ external bdd_xor : bdd -> bdd -> bdd = "wrapper_bdd_xor"
 external bdd_imp : bdd -> bdd -> bdd = "wrapper_bdd_imp"
 external bdd_biimp : bdd -> bdd -> bdd = "wrapper_bdd_biimp"
 external bdd_ite : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_ite"
+external bdd_apply : bdd -> bdd -> int -> bdd = "wrapper_bdd_apply"
+external bdd_exist : bdd -> bdd -> bdd = "wrapper_bdd_exist"
+external bdd_forall : bdd -> bdd -> bdd = "wrapper_bdd_forall"
 
 external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex"
+external bdd_appall : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appall"
 
 external bdd_satone : bdd -> bdd = "wrapper_bdd_satone"
 external bdd_satoneset : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_satone"
@@ -104,6 +108,7 @@ external bdd_varblockall : unit -> unit = "wrapper_bdd_varblockall"
 external bdd_addvarblock : bdd -> int -> int = "wrapper_bdd_addvarblock"
 external bdd_intaddvarblock : int -> int -> int -> int = "wrapper_bdd_intaddvarblock"
 external bdd_setvarorder : int list -> unit = "wrapper_bdd_setvarorder"
+external bdd_getvarorder : unit -> int list = "wrapper_bdd_getvarorder"
 external bdd_reorder : int -> int = "wrapper_bdd_reorder"
 external bdd_autoreorder : int -> int = "wrapper_bdd_autoreorder"
 external bdd_enable_reorder : unit -> unit = "wrapper_bdd_enable_reorder"
@@ -113,6 +118,7 @@ external bdd_level2var : int -> int = "wrapper_bdd_level2var"
 external bdd_var2level : int -> int = "wrapper_bdd_var2level"
 
 external bdd_setmaxincrease : int -> int = "wrapper_bdd_setmaxincrease"
+external bdd_setminfreenodes : int -> int = "wrapper_bdd_setminfreenodes"
 external bdd_setcacheratio : int -> int = "wrapper_bdd_setcacheratio"
 external bdd_isrunning : unit -> bool = "wrapper_bdd_isrunning"
 
@@ -132,6 +138,24 @@ let bdd_bigor bdd = bdd_bigapply bdd _BDDOP_OR
 (* create a conjunction of positive variables *)
 
 external bdd_createset : (int -> bool) -> bdd = "wrapper_bdd_createset"
+
+
+(* fdd operations *)
+external fdd_extdomain : int -> int = "wrapper_fdd_extdomain"
+external fdd_overlapdomain : int -> int -> int = "wrapper_fdd_overlapdomain"
+external fdd_clearall : unit -> unit = "wrapper_fdd_clearall"
+external fdd_domainnum : unit -> int = "wrapper_fdd_domainnum"
+external fdd_domainsize : int -> int = "wrapper_fdd_domainsize"
+external fdd_varnum : int -> int = "wrapper_fdd_varnum"
+external fdd_vars : int -> int array = "wrapper_fdd_vars"
+external fdd_ithvar : int -> int -> bdd = "wrapper_fdd_ithvar"
+external fdd_ithset : int -> bdd = "wrapper_fdd_ithset"
+external fdd_domain : int -> bdd = "wrapper_fdd_domain"
+external fdd_equals : int -> int -> bdd = "wrapper_fdd_equals"
+external fdd_intaddvarblock : int -> int -> int -> int = "wrapper_fdd_intaddvarblock"
+external fdd_setpair : bddpair -> int -> int -> int = "wrapper_fdd_setpair"
+external fdd_allsat : bdd -> (int list) -> unit = "wrapper_fdd_allsat"
+external fdd_printset : bdd -> unit = "wrapper_fdd_printset"
 
 let varcount = ref 0
 let bdd_newvar () = 
@@ -217,6 +241,29 @@ let bdd_allsat f bdd =
   bdd_allsat bdd
 ;;
 
+let fdd_allsat f bdd vars =
+  let shift0 = List.map (fun x -> x lsl 1) in
+  let shift1 = List.map (fun x -> (x lsl 1) + 1) in
+  let to_int_list xs =
+    List.fold_right
+      (fun n ints ->
+	 if n == 0 then shift0 ints
+	 else if n == 1 then shift1 ints
+	 else (shift0 ints) @ (shift1 ints))
+      xs
+      [0]
+  in
+  let rec iter_choices sofar = function
+    | [] -> f sofar
+    | (x::xs) -> List.iter (fun y -> iter_choices (y::sofar) xs) x
+  in
+  let g xs =
+    iter_choices [] (List.map to_int_list xs)
+  in
+  Callback.register "__fdd_allsat_handler" g;
+  fdd_allsat bdd (List.rev vars)
+;;
+
 exception EmptyBdd
 
 (* iterate through a certain set satisfying d *)
@@ -229,4 +276,4 @@ let rec bdd_setfold f d t =
     if e <> bdd_false then bdd_setfold f e t 
     else bdd_setfold f (bdd_high d) (f (bdd_var d) t)
 
-
+let bdd_diff a b = bdd_apply a b _BDDOP_DIFF

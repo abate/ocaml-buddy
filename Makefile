@@ -1,6 +1,6 @@
 
 NAME = buddy
-VERSION = 0.1
+VERSION = 0.2
 
 LIBS = _build/$(NAME).cma
 LIBS_OPT = _build/$(NAME).cmxa _build/$(NAME).cmxs

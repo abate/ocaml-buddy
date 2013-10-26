@@ -40,6 +40,8 @@ type reorder_strategy =
   |Random  (** Mostly used for debugging purpose, but may be usefull for others.
                Selects a random position for each variable. *)
 
+exception EmptyBdd
+
 external bdd_compare : bdd -> bdd -> int = "wrapper_bdd_compare"
 
 (** Initializes the bdd package. The [nodenum] parameter sets the initial number 
@@ -67,7 +69,7 @@ external bdd_setvarnum : int -> unit = "wrapper_bdd_setvarnum"
 (** Returns the number of defined variables. *) 
 external bdd_varnum : unit -> int = "wrapper_bdd_varnum"
 
-(** BDD operations *)
+(** {2 BDD operations} *)
 
 (** Return a fresh variable. Increment the number of variables available in this 
    session if needed *)
@@ -104,16 +106,31 @@ external bdd_imp : bdd -> bdd -> bdd = "wrapper_bdd_imp"
 (** The logical 'bi-implication' of two bdds.  *)
 external bdd_biimp : bdd -> bdd -> bdd = "wrapper_bdd_biimp"
 
+(** Returns a bdd representing the i'th variable. The BDDs returned from 
+    bdd_ithvar can then be used to form new BDDs by calling bdd_OP where
+    OP may be bddop_and or any of the other operators
+*)
+external bdd_ithvar : int -> bdd = "wrapper_bdd_ithvar"
+
+(** Returns a bdd representing the negation of the i'th variable.  *)
+external bdd_nithvar : int -> bdd = "wrapper_bdd_nithvar"
+
 (** If-then-else operator. Calculates the BDD for the expression 
     $(f \land g) \lor (\lnot f \land h)$ more efficiently than doing 
     the three operations separately.
 *)
 external bdd_ite : bdd -> bdd -> bdd -> bdd = "wrapper_bdd_ite"
 
+external bdd_exist : bdd -> bdd -> bdd = "wrapper_bdd_exist"
+external bdd_forall : bdd -> bdd -> bdd = "wrapper_bdd_forall"
+
+val bdd_diff : bdd -> bdd -> bdd
+
 val bdd_bigor : bdd list -> bdd
 val bdd_bigand : bdd list -> bdd
 
-(* external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex" *)
+external bdd_appex : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appex"
+external bdd_appall : bdd -> bdd -> int -> bdd -> bdd = "wrapper_bdd_appall"
 
 (** Finds all satisfying variable assignments. [bdd_allsat r handler] iterates
     through all legal variable assignments (those that make the BDD come true)
@@ -184,6 +201,7 @@ val bdd_autoreorder : ?strategy : reorder_strategy -> unit -> unit
     subset of the bdd variables (y1 ... ym), then the order will be as
     (x1, ..., xn, 1 ... m) *)
 val bdd_setvarorder : int list -> unit
+val bdd_getvarorder : unit -> int list
 
 (** Enables automatic reordering. *)
 external bdd_enable_reorder : unit -> unit = "wrapper_bdd_enable_reorder"
@@ -204,6 +222,7 @@ external bdd_level2var : int -> int = "wrapper_bdd_level2var"
 external bdd_var2level : int -> int = "wrapper_bdd_var2level"
 
 external bdd_setmaxincrease : int -> int = "wrapper_bdd_setmaxincrease"
+external bdd_setminfreenodes : int -> int = "wrapper_bdd_setminfreenodes"
 external bdd_setcacheratio : int -> int = "wrapper_bdd_setcacheratio"
 
 external bdd_fprinttable : out_channel -> bdd -> unit = "wrapper_bdd_fprinttable"
@@ -216,10 +235,57 @@ external bdd_save : out_channel -> bdd -> unit = "wrapper_bdd_save"
 (** create a conjunction of positive variables *)
 external bdd_createset : (int -> bool) -> bdd = "wrapper_bdd_createset"
 
-(** Utility functions *)
-
 val bdd_relprod : (int -> bool) -> bdd -> bdd -> bdd
-exception EmptyBdd
 
 (* [bdd_setfold f d a] fold through a certain set satisfying [d] *)
 val bdd_setfold : (int -> 'a -> 'a) -> bdd -> 'a -> 'a
+
+(** {2 FDD operations} *)
+
+(** Adds another set of finite domain blocks. *)
+external fdd_extdomain : int -> int = "wrapper_fdd_extdomain"
+
+(** Combine two fdd blocks into one. *)
+external fdd_overlapdomain : int -> int -> int = "wrapper_fdd_overlapdomain"
+
+(** Clear all allocated fdd blocks. *)
+external fdd_clearall : unit -> unit = "wrapper_fdd_clearall"
+
+(** Number of defined finite domain blocks. *)
+external fdd_domainnum : unit -> int = "wrapper_fdd_domainnum"
+
+(** Real size of a finite domain block. *)
+external fdd_domainsize : int -> int = "wrapper_fdd_domainsize"
+
+(** Binary size of a finite domain block. *)
+external fdd_varnum : int -> int = "wrapper_fdd_varnum"
+
+(** All bdd variables associated with a finite domain block. *)
+external fdd_vars : int -> int array = "wrapper_fdd_vars"
+
+(** The bdd for the i'th fdd set to a specific value. *)
+external fdd_ithvar : int -> int -> bdd = "wrapper_fdd_ithvar"
+
+(** The variable set for the i'th finite domain block. *)
+external fdd_ithset : int -> bdd = "wrapper_fdd_ithset"
+
+(** Bdd encoding of the domain of a fdd variable. *)
+external fdd_domain : int -> bdd = "wrapper_fdd_domain"
+
+(** Returns a bdd setting two fdd variables equal. *)
+external fdd_equals : int -> int -> bdd = "wrapper_fdd_equals"
+
+(** Prints a bdd for a finite domain block to stdout. *)
+external fdd_printset : bdd -> unit = "wrapper_fdd_printset"
+
+(** Adds a new variable block for reordering. *)
+external fdd_intaddvarblock : int -> int -> int -> int = "wrapper_fdd_intaddvarblock"
+
+(** Defines a pair for two finite domain blocks. *)
+external fdd_setpair : bddpair -> int -> int -> int = "wrapper_fdd_setpair"
+
+(** Finds all satisfying variable assignments. [fdd_allsat handler r vars]
+    iterates through all assignments to the fdd variables [vars] satisfying
+    the relation [r] and calls the callback handler [handler] for each of
+    them. *)
+val fdd_allsat : (int list -> unit) -> bdd -> int list -> unit
