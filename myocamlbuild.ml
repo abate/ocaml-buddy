@@ -31,8 +31,8 @@ let _ = dispatch begin function
        *)
        flag ["ocaml"; "use_bdd"; "link"; "library"; "byte"] & S[A"-dllib"; A"-lbuddy_stubs" ];
 
-       flag ["ocaml"; "use_bdd"; "link"; "library"; "native"] & S[A"-cclib"; A"-lbdd";];
        flag ["ocaml"; "use_bdd"; "link"; "library"; "native"] & S[A"-cclib"; A"-lbuddy_stubs"; ];
+       flag ["ocaml"; "use_bdd"; "link"; "library"; "native"] & S[A"-cclib"; A"-lbdd";];
 
        flag ["ocaml"; "use_bdd"; "link"; "program"; "native"] & S[A"-ccopt"; A"-L."; A"buddy.cmxa"];
        flag ["ocaml"; "use_bdd"; "link"; "program"; "byte"] & S[A"-ccopt"; A"-L."; A"buddy.cma"];

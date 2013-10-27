@@ -20,6 +20,7 @@
 #include <caml/custom.h>
 
 #include <bdd.h>
+#include <fdd.h>
 
 /* Snippet taken from byterun/io.h of OCaml 3.11 */
 
@@ -274,6 +275,18 @@ CAMLprim value wrapper_bdd_setvarorder(value neworder) {
   CAMLreturn(Val_unit);
 }
 
+CAMLprim value wrapper_bdd_getvarorder() {
+  CAMLparam0();
+  CAMLlocal1(varorder);
+  int i;
+  varorder = Val_emptylist;
+  for (i = bdd_varnum() - 1; i >= 0; i--) {
+      varorder = append(Val_int(bdd_level2var(i)), varorder);
+  }
+  CAMLreturn(varorder);
+}
+
+
 CAMLprim value wrapper_bdd_bigapply(value clause, value op) {
   CAMLparam2(clause,op);
   CAMLlocal1(r);
@@ -313,6 +326,21 @@ CAMLprim value wrapper_bdd_makeset(value varlist) {
   CAMLreturn(r);
 }
 
+CAMLprim value wrapper_fdd_vars(value dval) {
+    CAMLparam1( dval );
+    CAMLlocal1( vars );
+    int d = Int_val(dval);
+    int *d_vars = fdd_vars(d);
+    int d_size = fdd_varnum(d);
+    
+    vars = caml_alloc(d_size, 0);
+    size_t i;
+    for (i = 0; i < d_size; i++) {
+        Store_field( vars, i, Val_int(d_vars[i]));
+    }
+    CAMLreturn(vars);
+}
+
 CAMLprim value wrapper_bdd_allsat(value r) {
   CAMLparam1(r);
   BDD bdd = BDD_val(r);
@@ -326,8 +354,8 @@ CAMLprim value wrapper_bdd_allsat(value r) {
       //printf("%d : %d\n", i, varset[i]);
       // variants in ocaml range from 0 to n-1 !!!
       switch (varset[i]) {
-        case  0 : v = Val_int(0); break; // False
-        case  1 : v = Val_int(1); break; // True
+        case 0 : v = Val_int(0); break; // False
+        case 1 : v = Val_int(1); break; // True
         case -1 : v = Val_int(2); break; // Unknown
         default : caml_failwith("Unknown variable value"); break;
       }
@@ -340,6 +368,66 @@ CAMLprim value wrapper_bdd_allsat(value r) {
   }
   bdd_allsat(bdd,*handler);
   CAMLreturn(Val_unit);
+}
+
+typedef struct __DOM_LIST {
+    int dom;
+    struct __DOM_LIST *next;
+} *dom_list;
+
+dom_list g_domains = 0;
+
+void free_domains() {
+    dom_list c;
+    while (g_domains) {
+	c = g_domains;
+	g_domains = g_domains->next;
+	free(c);
+    }
+}
+void append_domain(int d) {
+    dom_list c = malloc(sizeof(struct __DOM_LIST));
+    c->dom = d;
+    c->next = g_domains;
+    g_domains = c;
+}
+
+CAMLprim value wrapper_fdd_allsat(value r, value domains) {
+    CAMLparam2(r, domains);
+    BDD bdd = BDD_val(r);
+    value* f = caml_named_value("__fdd_allsat_handler");
+    while (domains != Val_emptylist) {
+	append_domain(Int_val(Field(domains,0)));
+	domains = Field(domains, 1);
+    }
+    void handler(char* varset, int size) {
+	CAMLlocal3(dvals,vals,v);
+	dom_list doms;
+	doms = g_domains;
+	dvals = Val_emptylist;
+	while (doms) {
+	    int i;
+	    int d = doms->dom;
+	    int *d_vars = fdd_vars(d);
+	    vals = Val_emptylist;
+	    for (i = fdd_varnum(d) - 1; i >= 0; i--) {
+		switch (varset[d_vars[i]]) {
+		case 0 : v = Val_int(0); break; // False
+		case 1 : v = Val_int(1); break; // True
+		case -1 : v = Val_int(2); break; // Unknown
+		default : caml_failwith("Unknown variable value"); break;
+		}
+		vals = append(v,vals);
+	    }
+	    dvals = append(vals, dvals);
+	    doms = doms->next;
+	}
+	caml_callback(*f,dvals);
+	CAMLreturn0;
+    }
+    bdd_allsat(bdd,*handler);
+    free_domains();
+    CAMLreturn(Val_unit);
 }
 
 /* 
@@ -469,6 +557,8 @@ FUN2(bdd_imp, bdd, bdd, bdd)
 FUN2(bdd_biimp, bdd, bdd, bdd)
 FUN3(bdd_ite, bdd, bdd, bdd, bdd)
 FUN4(bdd_appex, bdd, bdd, int, bdd, bdd)
+FUN4(bdd_appall, bdd, bdd, int, bdd, bdd)
+FUN3(bdd_apply, bdd, bdd, int, bdd)
 FUN1(bdd_satone, bdd, bdd)
 FUN3(bdd_satoneset, bdd, bdd, bdd, bdd)
 FUN2(bdd_restrict, bdd, bdd, bdd)
@@ -497,4 +587,42 @@ FUN1(bdd_var2level, int, int)
 
 FUN1(bdd_setcacheratio, int, int)
 FUN1(bdd_setmaxincrease, int, int)
+FUN1(bdd_setminfreenodes, int, int)
 
+FUN2(bdd_exist, bdd, bdd, bdd)
+FUN2(bdd_forall, bdd, bdd, bdd)
+
+/* fdd operations */
+FUN2(fdd_overlapdomain, int, int, int)
+FUN0(fdd_clearall, unit)
+FUN0(fdd_domainnum, int)
+FUN1(fdd_domainsize, int, int)
+FUN1(fdd_varnum, int, int)
+FUN2(fdd_ithvar, int, int, bdd)
+FUN1(fdd_ithset, int, bdd)
+FUN1(fdd_domain, int, bdd)
+FUN2(fdd_equals, int, int, bdd)
+FUN3(fdd_intaddvarblock, int, int, int, int)
+FUN3(fdd_setpair, bddpair, int, int, int)
+FUN1(fdd_printset, bdd, unit)
+
+value wrapper_fdd_extdomain(value vsize) {
+    CAMLparam1(vsize);
+    int size = Int_val(vsize);
+    CAMLreturn(Val_int(fdd_extdomain(&size, 1)));
+}
+
+value wrapper_fdd_replace(value bdd, value vi, value vj) {
+    CAMLparam3(bdd, vi, vj);
+    bddPair* table;
+    BDD result;
+    int i,j;
+
+    i = Int_val(vi);
+    j = Int_val(vj);
+    table = bdd_newpair();
+    bdd_setpairs(table, fdd_vars(i), fdd_vars(j), fdd_varnum(i));
+    result = bdd_replace(BDD_val(bdd), table);
+    bdd_freepair(table);
+    FUN_RET_bdd(result);
+}
