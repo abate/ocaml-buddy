@@ -156,6 +156,7 @@ external fdd_intaddvarblock : int -> int -> int -> int = "wrapper_fdd_intaddvarb
 external fdd_setpair : bddpair -> int -> int -> int = "wrapper_fdd_setpair"
 external fdd_allsat : bdd -> (int list) -> unit = "wrapper_fdd_allsat"
 external fdd_printset : bdd -> unit = "wrapper_fdd_printset"
+external fdd_replace : bdd -> int -> int -> bdd = "wrapper_fdd_replace"
 
 let varcount = ref 0
 let bdd_newvar () = 

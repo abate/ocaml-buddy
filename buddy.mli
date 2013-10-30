@@ -289,3 +289,8 @@ external fdd_setpair : bddpair -> int -> int -> int = "wrapper_fdd_setpair"
     the relation [r] and calls the callback handler [handler] for each of
     them. *)
 val fdd_allsat : (int list -> unit) -> bdd -> int list -> unit
+
+(** [fdd_replace r x y] substitutes [y] for [x] in [r].  For example, if [r]
+    represents [x=0], then [fdd_replace r x y] represents [y=0].  The size of
+    [y] should be at least the size of [x]. *)
+external fdd_replace : bdd -> int -> int -> bdd = "wrapper_fdd_replace"

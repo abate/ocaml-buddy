@@ -135,6 +135,91 @@ let bdd_setvarorder_test () =
   Buddy.bdd_done ()
 ;;
 
+let string_of_intlist xs = String.concat "," (List.map string_of_int xs)
+let string_of_tpllist xs =
+  let pp tuple = "(" ^ string_of_intlist tuple ^ ")" in
+  String.concat "," (List.map pp xs)
+let fdd_allsat_list bdd vars =
+  let tpl_list = ref [] in
+  let add_tpl tpl = tpl_list := tpl::(!tpl_list) in
+  Buddy.fdd_allsat add_tpl bdd vars;
+  List.sort compare (!tpl_list)
+
+let fdd_domain () =
+  Buddy.bdd_init ();
+  let d = Buddy.fdd_extdomain 11 in
+  assert_equal ~printer:string_of_int 1 (Buddy.fdd_domainnum ());
+  assert_equal ~printer:string_of_int 4 (Buddy.fdd_varnum d);
+  assert_equal ~printer:string_of_int 11 (Buddy.fdd_domainsize d);
+  let domain_list = ref [] in
+  let add_elt = function
+    | [x] -> domain_list := x::(!domain_list)
+    | _ -> assert false
+  in
+  Buddy.fdd_allsat add_elt (Buddy.fdd_domain d) [d];
+  assert_equal
+    ~printer:string_of_intlist
+    [0;1;2;3;4;5;6;7;8;9;10]
+    (List.sort compare (!domain_list));
+  Buddy.bdd_done ()
+
+let fdd_equals () =
+  Buddy.bdd_init ();
+  let d = Buddy.fdd_extdomain 3 in
+  let e = Buddy.fdd_extdomain 3 in
+  assert_equal ~printer:string_of_int 2 (Buddy.fdd_domainnum ());
+  assert_equal ~printer:string_of_int 2 (Buddy.fdd_varnum d);
+  assert_equal ~printer:string_of_int 3 (Buddy.fdd_domainsize d);
+  let equals_bdd = Buddy.fdd_equals d e in
+  let domain_bdd = Buddy.fdd_domain d in
+  assert_equal
+    ~printer:string_of_tpllist
+    [[0;0];[1;1];[2;2];[3;3]]
+    (fdd_allsat_list equals_bdd [d; e]);
+  assert_equal
+    ~printer:string_of_tpllist
+    [[0;0];[1;1];[2;2]]
+    (fdd_allsat_list (Buddy.bdd_and domain_bdd equals_bdd) [d; e]);
+  Buddy.bdd_done ()
+
+let fdd_replace () =
+  Buddy.bdd_init ();
+  let d = Buddy.fdd_extdomain 2 in
+  let e = Buddy.fdd_extdomain 2 in
+  let d_restrict = Buddy.fdd_ithvar d 1 in
+  let replace = Buddy.fdd_replace d_restrict d e in
+  assert_equal
+    ~printer:string_of_tpllist
+    [[1;0];[1;1]]
+    (fdd_allsat_list d_restrict [d; e]);
+  assert_equal
+    ~printer:string_of_tpllist
+    [[0;1];[1;1]]
+    (fdd_allsat_list replace [d; e]);
+  Buddy.bdd_done ()
+
+let fdd_allsat () =
+  Buddy.bdd_init ();
+  let d = Buddy.fdd_extdomain 5 in
+  let e = Buddy.fdd_extdomain 5 in
+  let f = Buddy.fdd_extdomain 5 in
+  let d_restrict = Buddy.fdd_ithvar d 1 in
+  let e_restrict = Buddy.fdd_ithvar e 2 in
+  let f_restrict =
+    Buddy.bdd_or (Buddy.fdd_ithvar f 3) (Buddy.fdd_ithvar f 0)
+  in
+  let bdd = Buddy.bdd_bigand [d_restrict; e_restrict; f_restrict] in
+  assert_equal
+    ~printer:string_of_tpllist
+    [[1;2;0];[1;2;3]]
+    (fdd_allsat_list bdd [d; e; f]);
+  assert_equal
+    ~printer:string_of_tpllist
+    [[0;2];[3;2]]
+    (fdd_allsat_list bdd [f; e]);
+  Buddy.bdd_done ()
+
+
 let all =
   "all tests" >::: [ 
     "bdd_bigand" >:: bdd_satone_test;
@@ -146,6 +231,11 @@ let all =
     "bdd_allsat" >:: bdd_allsat_test;
 
     "bdd_setvarorder" >:: bdd_setvarorder_test;
+
+    "fdd_domain" >:: fdd_domain;
+    "fdd_equals" >:: fdd_equals;
+    "fdd_replace" >:: fdd_replace;
+    "fdd_allsat" >:: fdd_allsat;
   ]
 
 let main () =
